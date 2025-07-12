@@ -6,7 +6,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import AnganwadiDashboard from './src/screens/AnganwadiDashboard';
 import FamilyDashboard from './src/screens/FamilyDashboard';
 import AdminDashboard from './src/screens/AdminDashboard';
@@ -27,10 +26,32 @@ function LoginScreen({ navigation }: { navigation: any }) {
 
   const handleLogin = () => {
     setLoading(true);
-    // Simulate login process
+    
+    // Validate credentials and navigate directly to appropriate dashboard
     setTimeout(() => {
       setLoading(false);
-      navigation.navigate('RoleSelection');
+      
+      // Check password first
+      if (password !== 'hgm@2025') {
+        alert('गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+        return;
+      }
+      
+      // Navigate based on username
+      switch (email.toUpperCase()) {
+        case 'CGCO001':
+          navigation.navigate('AdminDashboard');
+          break;
+        case 'CGAB001':
+          navigation.navigate('AnganwadiDashboard');
+          break;
+        case 'CGPV001':
+          navigation.navigate('FamilyDashboard');
+          break;
+        default:
+          alert('गलत उपयोगकर्ता नाम! कृपया सही उपयोगकर्ता नाम दर्ज करें।');
+          break;
+      }
     }, 2000);
   };
 
@@ -85,6 +106,15 @@ function LoginScreen({ navigation }: { navigation: any }) {
               <Paragraph style={styles.loginSubtitle}>
                 अपनी यात्रा जारी रखने के लिए साइन इन करें
               </Paragraph>
+              
+              {/* Helper text for valid usernames */}
+              <View style={styles.helpContainer}>
+                <Text style={styles.helpTitle}>वैध उपयोगकर्ता आईडी:</Text>
+                <Text style={styles.helpText}>• CGCO001 - प्रशासन</Text>
+                <Text style={styles.helpText}>• CGAB001 - आंगनवाड़ी</Text>
+                <Text style={styles.helpText}>• CGPV001 - परिवार</Text>
+                <Text style={styles.helpPassword}>पासवर्ड: hgm@2025</Text>
+              </View>
 
               {/* Username Input */}
               <TextInput
@@ -160,7 +190,6 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
           <Stack.Screen name="AnganwadiDashboard" component={AnganwadiDashboard} />
           <Stack.Screen name="FamilyDashboard" component={FamilyDashboard} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
@@ -318,5 +347,30 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  helpContainer: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  helpTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 8,
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginBottom: 4,
+  },
+  helpPassword: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginTop: 8,
   },
 });
