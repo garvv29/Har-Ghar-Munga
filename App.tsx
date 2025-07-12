@@ -11,6 +11,10 @@ import AnganwadiDashboard from './src/screens/AnganwadiDashboard';
 import FamilyDashboard from './src/screens/FamilyDashboard';
 import AdminDashboard from './src/screens/AdminDashboard';
 import UploadPhotoScreen from './src/screens/UploadPhotoScreen';
+import AddFamilyScreen from './src/screens/AddFamilyScreen';
+import SearchFamiliesScreen from './src/screens/SearchFamiliesScreen';
+import PlantOptionsScreen from './src/screens/PlantOptionsScreen';
+import ProgressReportScreen from './src/screens/ProgressReportScreen';
 
 const { width } = Dimensions.get('window');
 const Stack = createStackNavigator();
@@ -132,23 +136,14 @@ function LoginScreen({ navigation }: { navigation: any }) {
               >
                 {loading ? 'साइन इन हो रहा है...' : 'साइन इन करें'}
               </Button>
-
-
-
-              {/* Sign Up Link */}
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>खाता नहीं है? </Text>
-                <Button 
-                  mode="text" 
-                  onPress={handleSignUp}
-                  style={styles.signUpButton}
-                  labelStyle={styles.signUpButtonText}
-                >
-                  साइन अप करें
-                </Button>
-              </View>
             </Card.Content>
           </Card>
+
+          {/* Powered by SSIPMT */}
+          <View style={styles.poweredByContainer}>
+            <Text style={styles.poweredByText}>Powered by</Text>
+            <Text style={styles.ssimptText}>SSIPMT RAIPUR</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
   );
@@ -170,6 +165,10 @@ export default function App() {
           <Stack.Screen name="FamilyDashboard" component={FamilyDashboard} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
           <Stack.Screen name="UploadPhoto" component={UploadPhotoScreen} />
+          <Stack.Screen name="AddFamily" component={AddFamilyScreen} />
+          <Stack.Screen name="SearchFamilies" component={SearchFamiliesScreen} />
+          <Stack.Screen name="PlantOptions" component={PlantOptionsScreen} />
+          <Stack.Screen name="ProgressReport" component={ProgressReportScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
@@ -213,7 +212,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 60,
-    paddingHorizontal: 10,
+    paddingHorizontal: 5,
+    width: '100%',
   },
   logoCircle: {
     width: 80,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1a1a1a',
     textAlign: 'center',
@@ -243,9 +243,10 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
-    lineHeight: 40,
+    lineHeight: 32,
     includeFontPadding: false,
     flexWrap: 'wrap',
+    width: '100%',
   },
 
   loginCard: {
@@ -296,23 +297,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  signUpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  poweredByContainer: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 40,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
-  signUpText: {
-    color: '#666666',
-    fontSize: 15,
+  poweredByText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  signUpButton: {
-    marginLeft: -8,
-  },
-  signUpButtonText: {
-    color: '#4CAF50',
-    fontSize: 15,
-    fontWeight: '600',
+  ssimptText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

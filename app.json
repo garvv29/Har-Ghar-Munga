@@ -26,7 +26,8 @@
       "edgeToEdgeEnabled": true,
       "allowBackup": true,
       "allowScreenCapture": true,
-      "allowScreenRecording": true
+      "allowScreenRecording": true,
+      "package": "com.anonymous.HarGharMunga"
     },
     "web": {
       "favicon": "./assets/favicon.png"

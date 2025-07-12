@@ -14,19 +14,22 @@ export default function AnganwadiDashboard({ navigation }: AnganwadiDashboardPro
     totalPlants: 45,
     distributedPlants: 38,
     activeFamilies: 32,
-    pendingRegistrations: 5,
   });
 
   const handleAddFamily = () => {
     navigation.navigate('AddFamily');
   };
 
-  const handleDistributePlant = () => {
-    navigation.navigate('DistributePlant');
+  const handleSearchFamilies = () => {
+    navigation.navigate('SearchFamilies');
   };
 
   const handleViewProgress = () => {
     navigation.navigate('ProgressReport');
+  };
+
+  const handlePlantOptions = () => {
+    navigation.navigate('PlantOptions');
   };
 
   return (
@@ -47,7 +50,17 @@ export default function AnganwadiDashboard({ navigation }: AnganwadiDashboardPro
             </View>
             <View style={styles.headerText}>
               <Title style={styles.headerTitle}>आंगनबाड़ी डैशबोर्ड</Title>
-              <Paragraph style={styles.headerSubtitle}>केंद्र: आंगनबाड़ी #123</Paragraph>
+              <View style={styles.centerInfo}>
+                <Text style={styles.centerName}>केंद्र: सरस्वती आंगनबाड़ी केंद्र</Text>
+                <Text style={styles.centerCode}>कोड: AWC-123-DLH</Text>
+                <Text style={styles.workerName}>कार्यकर्ता: श्रीमती सुनीता देवी</Text>
+              </View>
+              <View style={styles.statusInfo}>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusBadgeText}>सक्रिय</Text>
+                </View>
+                <Text style={styles.lastUpdate}>अंतिम अपडेट: आज, 3:45 PM</Text>
+              </View>
             </View>
           </View>
         </Surface>
@@ -68,10 +81,6 @@ export default function AnganwadiDashboard({ navigation }: AnganwadiDashboardPro
               <Text style={styles.statNumber}>{stats.activeFamilies}</Text>
               <Text style={styles.statLabel}>सक्रिय परिवार</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.pendingRegistrations}</Text>
-              <Text style={styles.statLabel}>लंबित पंजीकरण</Text>
-            </View>
           </View>
         </Surface>
 
@@ -90,18 +99,27 @@ export default function AnganwadiDashboard({ navigation }: AnganwadiDashboardPro
             </Button>
             <Button 
               mode="contained" 
-              icon="sprout"
+              icon="magnify"
               style={styles.actionButton}
               buttonColor="#2E7D32"
-              onPress={handleDistributePlant}
+              onPress={handleSearchFamilies}
             >
-              पौधा वितरित करें
+              परिवार खोजें
             </Button>
             <Button 
-              mode="outlined" 
+              mode="contained" 
+              icon="flower"
+              style={styles.actionButton}
+              buttonColor="#388E3C"
+              onPress={handlePlantOptions}
+            >
+              मुंगे के विकल्प
+            </Button>
+            <Button 
+              mode="contained" 
               icon="chart-line"
               style={styles.actionButton}
-              textColor="#4CAF50"
+              buttonColor="#66BB6A"
               onPress={handleViewProgress}
             >
               प्रगति रिपोर्ट
@@ -144,25 +162,6 @@ export default function AnganwadiDashboard({ navigation }: AnganwadiDashboardPro
                 <Text style={styles.activityTime}>कल, 11:20 AM</Text>
                 <Chip style={styles.statusChip} textStyle={styles.statusText}>नया</Chip>
               </View>
-            </View>
-          </View>
-        </Surface>
-
-        {/* Plant Health Summary */}
-        <Surface style={styles.healthContainer}>
-          <Title style={styles.sectionTitle}>पौधा स्वास्थ्य सारांश</Title>
-          <View style={styles.healthStats}>
-            <View style={styles.healthCard}>
-              <Text style={styles.healthNumber}>85%</Text>
-              <Text style={styles.healthLabel}>स्वस्थ पौधे</Text>
-            </View>
-            <View style={styles.healthCard}>
-              <Text style={styles.healthNumber}>12%</Text>
-              <Text style={styles.healthLabel}>ध्यान आवश्यक</Text>
-            </View>
-            <View style={styles.healthCard}>
-              <Text style={styles.healthNumber}>3%</Text>
-              <Text style={styles.healthLabel}>समस्या</Text>
             </View>
           </View>
         </Surface>
@@ -235,11 +234,46 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  headerSubtitle: {
-    fontSize: 14,
+  centerInfo: {
+    marginBottom: 12,
+  },
+  centerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 2,
+  },
+  centerCode: {
+    fontSize: 13,
     color: '#666666',
+    marginBottom: 2,
+  },
+  workerName: {
+    fontSize: 13,
+    color: '#666666',
+    marginBottom: 8,
+  },
+  statusInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statusBadge: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  lastUpdate: {
+    fontSize: 11,
+    color: '#999999',
   },
   statsContainer: {
     padding: 20,
@@ -346,34 +380,6 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#4CAF50',
     fontSize: 10,
-  },
-  healthContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  healthStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  healthCard: {
-    alignItems: 'center',
-  },
-  healthNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 4,
-  },
-  healthLabel: {
-    fontSize: 12,
-    color: '#666666',
-    textAlign: 'center',
   },
   fab: {
     position: 'absolute',
