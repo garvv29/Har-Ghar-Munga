@@ -26,7 +26,7 @@ function LoginScreen({ navigation }: { navigation: any }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('चेतावनी', 'कृपया उपयोगकर्ता नाम और पासवर्ड दर्ज करें।');
       return;
@@ -34,32 +34,67 @@ function LoginScreen({ navigation }: { navigation: any }) {
 
     setLoading(true);
     
-    // Demo login system - keeping API structure for future use
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // First test the connection
+      console.log('Testing connection to server...');
+      const connectionTest = await apiService.testConnection();
+      console.log('Connection test result:', connectionTest);
       
-      // Check password first
-      if (password !== 'hgm@2025') {
-        Alert.alert('गलत पासवर्ड!', 'कृपया सही पासवर्ड दर्ज करें।');
+      if (!connectionTest.success) {
+        Alert.alert('कनेक्शन त्रुटि', `सर्वर से कनेक्ट नहीं हो पा रहा है: ${connectionTest.message}`);
         return;
       }
       
-      // Navigate based on username (demo credentials)
-      switch (email.toUpperCase()) {
-        case 'CGCO001':
-          navigation.navigate('AdminDashboard');
-          break;
-        case 'CGAB001':
-          navigation.navigate('AnganwadiDashboard');
-          break;
-        case 'CGPV001':
-          navigation.navigate('FamilyDashboard');
-          break;
-        default:
-          Alert.alert('गलत उपयोगकर्ता नाम!', 'कृपया सही उपयोगकर्ता नाम दर्ज करें।');
-          break;
+      console.log('Connection successful, attempting login...');
+      const response = await apiService.login(email.trim(), password);
+      
+      console.log('Login response:', response);
+      
+      if (response.success) {
+        // Store the token if available
+        if (response.token) {
+          apiService.setToken(response.token);
+        }
+        
+        // Navigate based on user role
+        const userRole = response.user?.role || response.role;
+        console.log('User role:', userRole);
+        
+        switch (userRole) {
+          case 'admin':
+            navigation.navigate('AdminDashboard');
+            break;
+          case 'anganwadi':
+            navigation.navigate('AnganwadiDashboard');
+            break;
+          case 'family':
+            navigation.navigate('FamilyDashboard');
+            break;
+          default:
+            // If no specific role, try to determine from username or other fields
+            if (response.user?.username?.toUpperCase().includes('ADMIN') || 
+                response.user?.username?.toUpperCase().includes('CGCO')) {
+              navigation.navigate('AdminDashboard');
+            } else if (response.user?.username?.toUpperCase().includes('ANGANWADI') || 
+                       response.user?.username?.toUpperCase().includes('CGAB')) {
+              navigation.navigate('AnganwadiDashboard');
+            } else if (response.user?.username?.toUpperCase().includes('FAMILY') || 
+                       response.user?.username?.toUpperCase().includes('CGPV')) {
+              navigation.navigate('FamilyDashboard');
+            } else {
+              Alert.alert('त्रुटि', 'अज्ञात उपयोगकर्ता भूमिका।');
+            }
+            break;
+        }
+      } else {
+        Alert.alert('लॉगिन विफल', response.message || 'लॉगिन में त्रुटि हुई।');
       }
-    }, 1500); // Reduced loading time for demo
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('नेटवर्क त्रुटि', `सर्वर से कनेक्ट नहीं हो पा रहा है: ${error}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
 

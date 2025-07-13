@@ -5,17 +5,18 @@ const API_BASE_URL = 'https://grx6djfl-5000.inc1.devtunnels.ms'; // Change this 
 export interface LoginResponse {
   success: boolean;
   message: string;
-  user: {
-    id: string;
-    username: string;
-    role: 'admin' | 'anganwadi' | 'family';
-    name: string;
+  user?: {
+    id?: string;
+    username?: string;
+    role?: 'admin' | 'anganwadi' | 'family' | string;
+    name?: string;
     centerCode?: string;
     centerName?: string;
     district?: string;
     block?: string;
   };
-  token: string;
+  token?: string;
+  [key: string]: any; // Allow additional properties
 }
 
 export interface FamilyRegistrationData {
@@ -130,14 +131,23 @@ class ApiService {
       headers: this.getHeaders(),
     };
 
+    console.log('Making API request to:', url);
+    console.log('Request config:', config);
+
     try {
       const response = await fetch(url, config);
       
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Response error text:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
       
       const data = await response.json();
+      console.log('Response data:', data);
       return data;
     } catch (error) {
       console.error('API request failed:', error);
@@ -145,17 +155,42 @@ class ApiService {
     }
   }
 
+  // Test connection
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(this.baseURL);
+      console.log('Test connection response:', response.status);
+      return { success: response.ok, message: `Server responded with status: ${response.status}` };
+    } catch (error) {
+      console.error('Test connection failed:', error);
+      return { success: false, message: `Connection failed: ${error}` };
+    }
+  }
+
   // Authentication APIs
   async login(username: string, password: string): Promise<LoginResponse> {
-    return this.makeRequest<LoginResponse>('/auth/login', {
+    return this.makeRequest<LoginResponse>('/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
   }
 
   async logout(): Promise<{ success: boolean; message: string }> {
-    return this.makeRequest<{ success: boolean; message: string }>('/auth/logout', {
+    return this.makeRequest<{ success: boolean; message: string }>('/logout', {
       method: 'POST',
+    });
+  }
+
+  async register(userData: any): Promise<{ success: boolean; message: string; userId?: string }> {
+    return this.makeRequest<{ success: boolean; message: string; userId?: string }>('/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async getDetails(): Promise<any> {
+    return this.makeRequest<any>('/details', {
+      method: 'GET',
     });
   }
 

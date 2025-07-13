@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, View, ScrollView, Dimensions, Image } from 'react-native';
 import { Card, Title, Paragraph, Button, Surface, Text, FAB, Chip, ProgressBar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -22,15 +22,17 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
   });
 
   const [waterCompleted, setWaterCompleted] = useState(false);
+  const [latestPhotoUri, setLatestPhotoUri] = useState<string | null>(null);
 
   const handleUploadPhoto = () => {
     navigation.navigate('UploadPhoto', {
-      onPhotoUpload: () => {
+      onPhotoUpload: (uri?: string) => {
         setPlantData(prev => ({
           ...prev,
           photoCount: prev.photoCount + 1,
           careScore: Math.min(prev.careScore + 10, 100)
         }));
+        if (uri) setLatestPhotoUri(uri);
       }
     });
   };
@@ -65,6 +67,17 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
       />
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Latest Photo */}
+        {latestPhotoUri && (
+          <Surface style={styles.latestPhotoContainer}>
+            <Title style={styles.sectionTitle}>नवीनतम फोटो</Title>
+            <Image
+              source={{ uri: latestPhotoUri }}
+              style={styles.latestPhoto}
+              resizeMode="cover"
+            />
+          </Surface>
+        )}
         {/* Header */}
         <Surface style={styles.header}>
           <View style={styles.headerContent}>
@@ -74,7 +87,7 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
               </View>
             </View>
             <View style={styles.headerText}>
-              <Title style={styles.headerTitle}>मेरा मूंनगा</Title>
+              <Title style={styles.headerTitle}>मेरा पौधा</Title>
               <Paragraph style={styles.headerSubtitle}>परिवार: राम कुमार</Paragraph>
             </View>
           </View>
@@ -143,25 +156,6 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
                 onPress={handleWaterPlant}
               >
                 {waterCompleted ? 'पूर्ण' : 'पूर्ण करें'}
-              </Button>
-            </View>
-            
-            <View style={styles.scheduleItem}>
-              <View style={styles.scheduleIcon}>
-                <Text style={styles.scheduleEmoji}>📸</Text>
-              </View>
-              <View style={styles.scheduleContent}>
-                <Text style={styles.scheduleTitle}>फोटो अपलोड</Text>
-                <Text style={styles.scheduleTime}>हर सप्ताह</Text>
-                <Text style={styles.scheduleStatus}>कुल फोटो: {plantData.photoCount}</Text>
-              </View>
-              <Button 
-                mode="outlined" 
-                style={styles.scheduleButton}
-                textColor="#4CAF50"
-                onPress={handleUploadPhoto}
-              >
-                अपलोड
               </Button>
             </View>
           </View>
@@ -557,5 +551,22 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#4CAF50',
+  },
+  latestPhotoContainer: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    elevation: 6,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  latestPhoto: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginTop: 10,
   },
 }); 

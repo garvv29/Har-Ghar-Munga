@@ -75,7 +75,7 @@ export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScre
       
       // Update care score if callback is provided
       if (route?.params?.onPhotoUpload) {
-        route.params.onPhotoUpload();
+        route.params.onPhotoUpload(selectedImage);
       }
       
       Alert.alert(
