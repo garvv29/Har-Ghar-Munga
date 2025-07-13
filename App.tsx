@@ -68,7 +68,10 @@ function LoginScreen({ navigation }: { navigation: any }) {
             navigation.navigate('AnganwadiDashboard');
             break;
           case 'family':
-            navigation.navigate('FamilyDashboard');
+            navigation.navigate('FamilyDashboard', { 
+              userData: response.user,
+              userId: response.user?.id 
+            });
             break;
           default:
             // If no specific role, try to determine from username or other fields

@@ -232,6 +232,12 @@ class ApiService {
     });
   }
 
+  async getFamilyByUserId(userId: string): Promise<FamilyData> {
+    return this.makeRequest<FamilyData>(`/families/user/${userId}`, {
+      method: 'GET',
+    });
+  }
+
   async updateFamily(familyId: string, updateData: Partial<FamilyData>): Promise<{
     success: boolean;
     message: string;

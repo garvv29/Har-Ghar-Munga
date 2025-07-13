@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Dimensions, Image, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Surface, Text, FAB, Chip, ProgressBar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { apiService, FamilyData } from '../utils/api';
 
 const { width } = Dimensions.get('window');
 
 interface FamilyDashboardProps {
   navigation: any;
+  route?: {
+    params?: {
+      userData?: any;
+      userId?: string;
+    };
+  };
 }
 
-export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
+export default function FamilyDashboard({ navigation, route }: FamilyDashboardProps) {
   const [plantData, setPlantData] = useState({
     plantName: 'मूंनगा पौधा #123',
     plantAge: '45 दिन',
@@ -23,6 +30,32 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
 
   const [waterCompleted, setWaterCompleted] = useState(false);
   const [latestPhotoUri, setLatestPhotoUri] = useState<string | null>(null);
+  const [familyData, setFamilyData] = useState<FamilyData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch family data when component mounts
+  useEffect(() => {
+    const fetchFamilyData = async () => {
+      try {
+        const userId = route?.params?.userId;
+        if (userId) {
+          console.log('Fetching family data for user ID:', userId);
+          const data = await apiService.getFamilyByUserId(userId);
+          setFamilyData(data);
+          console.log('Family data fetched:', data);
+        } else {
+          console.log('No user ID provided, using default data');
+        }
+      } catch (error) {
+        console.error('Error fetching family data:', error);
+        Alert.alert('त्रुटि', 'परिवार की जानकारी लोड नहीं हो पाई।');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFamilyData();
+  }, [route?.params?.userId]);
 
   const handleUploadPhoto = () => {
     navigation.navigate('UploadPhoto', {
@@ -88,7 +121,9 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
             </View>
             <View style={styles.headerText}>
               <Title style={styles.headerTitle}>मेरा पौधा</Title>
-              <Paragraph style={styles.headerSubtitle}>परिवार: राम कुमार</Paragraph>
+              <Paragraph style={styles.headerSubtitle}>
+                परिवार: {familyData?.parentName || route?.params?.userData?.name || 'लोड हो रहा है...'}
+              </Paragraph>
             </View>
           </View>
         </Surface>
@@ -100,7 +135,9 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
               <Text style={styles.plantEmoji}>🌱</Text>
             </View>
             <View style={styles.plantInfo}>
-              <Title style={styles.plantTitle}>{plantData.plantName}</Title>
+              <Title style={styles.plantTitle}>
+                {familyData?.childName ? `${familyData.childName} का पौधा` : plantData.plantName}
+              </Title>
               <Text style={styles.plantAge}>{plantData.plantAge}</Text>
             </View>
             <Chip style={styles.healthChip} textStyle={styles.healthChipText}>
