@@ -3,16 +3,17 @@ import { StyleSheet, View, ScrollView, Alert, Image } from 'react-native';
 import { Card, Title, Button, Surface, Text, TextInput, Appbar, RadioButton, Chip, Dialog, Portal, Paragraph } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { apiService, FamilyRegistrationData } from '../utils/api';
 
 interface AddFamilyScreenProps {
   navigation: any;
 }
 
 export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Omit<FamilyRegistrationData, 'plantPhoto' | 'pledgePhoto'>>({
     // बच्चे की जानकारी
     childName: '',
-    gender: 'लड़का',
+    gender: 'लड़का' as const,
     dateOfBirth: '',
     age: '',
     weight: '',
@@ -129,20 +130,16 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     setShowConfirmDialog(false);
     setLoading(true);
     
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    // Demo registration - keeping API structure for future use
+    setTimeout(() => {
+      setLoading(false);
       
       Alert.alert(
         'सफलता!',
-        'बच्चे का पंजीकरण सफलतापूर्वक हो गया',
+        'बच्चे का पंजीकरण सफलतापूर्वक हो गया। परिवार ID: FAM-2025-001',
         [{ text: 'ठीक है', onPress: () => navigation.goBack() }]
       );
-    } catch (error) {
-      Alert.alert('त्रुटि', 'पंजीकरण में समस्या हुई, कृपया दोबारा कोशिश करें');
-    } finally {
-      setLoading(false);
-    }
+    }, 2000);
   };
 
   return (

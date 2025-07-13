@@ -10,7 +10,7 @@ interface FamilyDashboardProps {
 }
 
 export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
-  const [plantData] = useState({
+  const [plantData, setPlantData] = useState({
     plantName: 'मूंनगा पौधा #123',
     plantAge: '45 दिन',
     healthStatus: 'स्वस्थ',
@@ -21,8 +21,18 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
     careScore: 85,
   });
 
+  const [waterCompleted, setWaterCompleted] = useState(false);
+
   const handleUploadPhoto = () => {
-    navigation.navigate('UploadPhoto');
+    navigation.navigate('UploadPhoto', {
+      onPhotoUpload: () => {
+        setPlantData(prev => ({
+          ...prev,
+          photoCount: prev.photoCount + 1,
+          careScore: Math.min(prev.careScore + 10, 100)
+        }));
+      }
+    });
   };
 
   const handleViewNutrition = () => {
@@ -33,8 +43,18 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
     navigation.navigate('CareTips');
   };
 
-  const handleViewProgress = () => {
-    navigation.navigate('PlantProgress');
+
+
+  const handleWaterPlant = () => {
+    setWaterCompleted(true);
+    setPlantData(prev => ({
+      ...prev,
+      lastWatered: 'अभी, ' + new Date().toLocaleTimeString('hi-IN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+      nextWatering: 'कल, सुबह 8:00'
+    }));
   };
 
   return (
@@ -99,33 +119,6 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
             >
               फोटो अपलोड
             </Button>
-            <Button 
-              mode="contained" 
-              icon="book-open"
-              style={styles.actionButton}
-              buttonColor="#2E7D32"
-              onPress={handleViewNutrition}
-            >
-              पोषण गाइड
-            </Button>
-            <Button 
-              mode="outlined" 
-              icon="lightbulb"
-              style={styles.actionButton}
-              textColor="#4CAF50"
-              onPress={handleViewCareTips}
-            >
-              देखभाल टिप्स
-            </Button>
-            <Button 
-              mode="outlined" 
-              icon="chart-line"
-              style={styles.actionButton}
-              textColor="#4CAF50"
-              onPress={handleViewProgress}
-            >
-              प्रगति देखें
-            </Button>
           </View>
         </Surface>
 
@@ -145,9 +138,11 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
               <Button 
                 mode="contained" 
                 style={styles.scheduleButton}
-                buttonColor="#4CAF50"
+                buttonColor={waterCompleted ? "#666666" : "#4CAF50"}
+                disabled={waterCompleted}
+                onPress={handleWaterPlant}
               >
-                पूर्ण
+                {waterCompleted ? 'पूर्ण' : 'पूर्ण करें'}
               </Button>
             </View>
             
@@ -211,24 +206,40 @@ export default function FamilyDashboard({ navigation }: FamilyDashboardProps) {
           </View>
         </Surface>
 
-        {/* Nutrition Tips */}
+        {/* Munga Benefits */}
         <Surface style={styles.nutritionContainer}>
-          <Title style={styles.sectionTitle}>आज का पोषण टिप</Title>
+          <Title style={styles.sectionTitle}>मूंगा उगाने के फायदे</Title>
           <View style={styles.nutritionCard}>
-            <Text style={styles.nutritionEmoji}>🥗</Text>
-            <Text style={styles.nutritionTitle}>मूंनगा की पत्तियों का सूप</Text>
+            <Text style={styles.nutritionEmoji}>🌱</Text>
+            <Text style={styles.nutritionTitle}>स्वास्थ्य लाभ</Text>
             <Text style={styles.nutritionDesc}>
-              मूंनगा की ताजी पत्तियों से बना सूप आयरन और विटामिन से भरपूर होता है। 
-              बच्चों के लिए बहुत फायदेमंद है।
+              • आयरन की कमी दूर होती है{'\n'}
+              • रोग प्रतिरोधक क्षमता बढ़ती है{'\n'}
+              • विटामिन A, C और K मिलते हैं{'\n'}
+              • एनीमिया से बचाव होता है
             </Text>
-            <Button 
-              mode="outlined" 
-              style={styles.nutritionButton}
-              textColor="#4CAF50"
-              onPress={handleViewNutrition}
-            >
-              रेसिपी देखें
-            </Button>
+          </View>
+          
+          <View style={styles.nutritionCard}>
+            <Text style={styles.nutritionEmoji}>💰</Text>
+            <Text style={styles.nutritionTitle}>आर्थिक लाभ</Text>
+            <Text style={styles.nutritionDesc}>
+              • घर में ही ताजी सब्जी मिलती है{'\n'}
+              • बाजार से खरीदने की जरूरत नहीं{'\n'}
+              • पैसे की बचत होती है{'\n'}
+              • अतिरिक्त आय का स्रोत
+            </Text>
+          </View>
+          
+          <View style={styles.nutritionCard}>
+            <Text style={styles.nutritionEmoji}>🌍</Text>
+            <Text style={styles.nutritionTitle}>पर्यावरण लाभ</Text>
+            <Text style={styles.nutritionDesc}>
+              • हवा शुद्ध होती है{'\n'}
+              • मिट्टी की गुणवत्ता बेहतर होती है{'\n'}
+              • जैविक खेती को बढ़ावा{'\n'}
+              • प्रदूषण कम होता है
+            </Text>
           </View>
         </Surface>
       </ScrollView>
@@ -517,6 +528,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
+    marginBottom: 16,
   },
   nutritionEmoji: {
     fontSize: 32,

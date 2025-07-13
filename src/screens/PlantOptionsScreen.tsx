@@ -133,13 +133,13 @@ export default function PlantOptionsScreen({ navigation }: PlantOptionsScreenPro
       
       <Appbar.Header style={styles.header}>
         <Appbar.BackAction onPress={() => navigation.goBack()} color="#FFFFFF" />
-        <Appbar.Content title="मुंगे के विकल्प" titleStyle={styles.headerTitle} />
+        <Appbar.Content title="हमारे पौधे" titleStyle={styles.headerTitle} />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Surface style={styles.titleContainer}>
-          <Title style={styles.pageTitle}>मुंगे की किस्में</Title>
-          <Text style={styles.subtitle}>नीचे दिए गए विकल्पों में से चुनें और फोटो अपलोड करें</Text>
+          <Title style={styles.pageTitle}>हमारे पौधे</Title>
+          <Text style={styles.subtitle}>नीचे दिए गए पौधों में से चुनें और फोटो अपलोड करें</Text>
         </Surface>
 
         <View style={styles.plantsGrid}>

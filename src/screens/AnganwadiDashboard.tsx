@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, View, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { Card, Title, Paragraph, Button, Surface, Text, FAB, Chip } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -85,47 +85,35 @@ export default function AnganwadiDashboard({ navigation }: AnganwadiDashboardPro
         </Surface>
 
         {/* Quick Actions */}
-        <Surface style={styles.actionsContainer}>
-          <Title style={styles.sectionTitle}>त्वरित कार्य</Title>
-          <View style={styles.actionButtons}>
-            <Button 
-              mode="contained" 
-              icon="account-plus"
-              style={styles.actionButton}
-              buttonColor="#4CAF50"
-              onPress={handleAddFamily}
-            >
-              नया परिवार जोड़ें
-            </Button>
-            <Button 
-              mode="contained" 
-              icon="magnify"
-              style={styles.actionButton}
-              buttonColor="#2E7D32"
-              onPress={handleSearchFamilies}
-            >
-              परिवार खोजें
-            </Button>
-            <Button 
-              mode="contained" 
-              icon="flower"
-              style={styles.actionButton}
-              buttonColor="#388E3C"
-              onPress={handlePlantOptions}
-            >
-              मुंगे के विकल्प
-            </Button>
-            <Button 
-              mode="contained" 
-              icon="chart-line"
-              style={styles.actionButton}
-              buttonColor="#66BB6A"
-              onPress={handleViewProgress}
-            >
-              प्रगति रिपोर्ट
-            </Button>
-          </View>
-        </Surface>
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('AddFamily')}>
+            <View style={styles.quickActionIcon}>
+              <Text style={styles.quickActionIconText}>👨‍👩‍👧‍👦</Text>
+            </View>
+            <Text style={styles.quickActionText}>नया परिवार जोड़ें</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('SearchFamilies')}>
+            <View style={styles.quickActionIcon}>
+              <Text style={styles.quickActionIconText}>🔍</Text>
+            </View>
+            <Text style={styles.quickActionText}>परिवार खोजें</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('PlantOptions')}>
+            <View style={styles.quickActionIcon}>
+              <Text style={styles.quickActionIconText}>🌱</Text>
+            </View>
+            <Text style={styles.quickActionText}>हमारे पौधे</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate('ProgressReport')}>
+            <View style={styles.quickActionIcon}>
+              <Text style={styles.quickActionIconText}>📊</Text>
+            </View>
+            <Text style={styles.quickActionText}>प्रगति रिपोर्ट</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Recent Activities */}
         <Surface style={styles.activitiesContainer}>
@@ -311,23 +299,39 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
   },
-  actionsContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 6,
+  quickActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
   },
-  actionButtons: {
-    gap: 12,
-  },
-  actionButton: {
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
+    elevation: 4,
+    padding: 16,
+    marginRight: 8,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  quickActionIcon: {
+    backgroundColor: '#E8F5E8',
+    borderRadius: 24,
+    padding: 8,
     marginBottom: 8,
+  },
+  quickActionIconText: {
+    fontSize: 24,
+    color: '#4CAF50',
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1a1a1a',
+    textAlign: 'center',
   },
   activitiesContainer: {
     padding: 20,
@@ -388,4 +392,4 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#4CAF50',
   },
-}); 
+});

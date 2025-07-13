@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { StyleSheet, View, ScrollView, KeyboardAvoidingView, Platform, Dimensions, Alert } from 'react-native';
 import { Provider as PaperProvider, Card, Title, Paragraph, Button, Surface, TextInput, Text, HelperText } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
+import { apiService, LoginResponse } from './src/utils/api';
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -14,6 +15,7 @@ import AddFamilyScreen from './src/screens/AddFamilyScreen';
 import SearchFamiliesScreen from './src/screens/SearchFamiliesScreen';
 import PlantOptionsScreen from './src/screens/PlantOptionsScreen';
 import ProgressReportScreen from './src/screens/ProgressReportScreen';
+import FamilyProgressScreen from './src/screens/FamilyProgressScreen';
 
 const { width } = Dimensions.get('window');
 const Stack = createStackNavigator();
@@ -25,19 +27,24 @@ function LoginScreen({ navigation }: { navigation: any }) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('चेतावनी', 'कृपया उपयोगकर्ता नाम और पासवर्ड दर्ज करें।');
+      return;
+    }
+
     setLoading(true);
     
-    // Validate credentials and navigate directly to appropriate dashboard
+    // Demo login system - keeping API structure for future use
     setTimeout(() => {
       setLoading(false);
       
       // Check password first
       if (password !== 'hgm@2025') {
-        alert('गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+        Alert.alert('गलत पासवर्ड!', 'कृपया सही पासवर्ड दर्ज करें।');
         return;
       }
       
-      // Navigate based on username
+      // Navigate based on username (demo credentials)
       switch (email.toUpperCase()) {
         case 'CGCO001':
           navigation.navigate('AdminDashboard');
@@ -49,10 +56,10 @@ function LoginScreen({ navigation }: { navigation: any }) {
           navigation.navigate('FamilyDashboard');
           break;
         default:
-          alert('गलत उपयोगकर्ता नाम! कृपया सही उपयोगकर्ता नाम दर्ज करें।');
+          Alert.alert('गलत उपयोगकर्ता नाम!', 'कृपया सही उपयोगकर्ता नाम दर्ज करें।');
           break;
       }
-    }, 2000);
+    }, 1500); // Reduced loading time for demo
   };
 
 
@@ -101,70 +108,48 @@ function LoginScreen({ navigation }: { navigation: any }) {
 
           {/* Login Card */}
           <Card style={styles.loginCard}>
-            <Card.Content style={styles.cardContent}>
-              <Title style={styles.loginTitle}>स्वागत है</Title>
+            <Card.Content>
+              <Title style={styles.loginTitle}>लॉगिन करें</Title>
               <Paragraph style={styles.loginSubtitle}>
-                अपनी यात्रा जारी रखने के लिए साइन इन करें
+                हर घर मुंगा अभियान में आपका स्वागत है
               </Paragraph>
-              
-              {/* Helper text for valid usernames */}
-              <View style={styles.helpContainer}>
-                <Text style={styles.helpTitle}>वैध उपयोगकर्ता आईडी:</Text>
-                <Text style={styles.helpText}>• CGCO001 - प्रशासन</Text>
-                <Text style={styles.helpText}>• CGAB001 - आंगनवाड़ी</Text>
-                <Text style={styles.helpText}>• CGPV001 - परिवार</Text>
-                <Text style={styles.helpPassword}>पासवर्ड: hgm@2025</Text>
-              </View>
 
-              {/* Username Input */}
               <TextInput
                 label="उपयोगकर्ता नाम"
                 value={email}
                 onChangeText={setEmail}
                 mode="outlined"
                 style={styles.input}
-                autoCapitalize="none"
-                left={<TextInput.Icon icon="account" color="#4CAF50" />}
-                outlineColor="#E0E0E0"
-                activeOutlineColor="#4CAF50"
-                theme={{ colors: { primary: '#4CAF50' } }}
+                left={<TextInput.Icon icon="account" />}
+                theme={{ colors: { primary: '#2E7D32' } }}
               />
 
-              {/* Password Input */}
               <TextInput
                 label="पासवर्ड"
                 value={password}
                 onChangeText={setPassword}
                 mode="outlined"
-                style={styles.input}
                 secureTextEntry={!showPassword}
-                left={<TextInput.Icon icon="lock" color="#4CAF50" />}
+                style={styles.input}
+                left={<TextInput.Icon icon="lock" />}
                 right={
                   <TextInput.Icon 
                     icon={showPassword ? "eye-off" : "eye"} 
-                    color="#4CAF50"
                     onPress={() => setShowPassword(!showPassword)}
                   />
                 }
-                outlineColor="#E0E0E0"
-                activeOutlineColor="#4CAF50"
-                theme={{ colors: { primary: '#4CAF50' } }}
+                theme={{ colors: { primary: '#2E7D32' } }}
               />
 
-
-
-              {/* Login Button */}
-              <Button 
-                mode="contained" 
+              <Button
+                mode="contained"
                 onPress={handleLogin}
                 loading={loading}
-                disabled={loading || !email || !password}
                 style={styles.loginButton}
-                contentStyle={styles.loginButtonContent}
-                labelStyle={styles.loginButtonText}
                 buttonColor="#2E7D32"
+                contentStyle={styles.loginButtonContent}
               >
-                {loading ? 'साइन इन हो रहा है...' : 'साइन इन करें'}
+                {loading ? 'लॉगिन हो रहा है...' : 'लॉगिन करें'}
               </Button>
             </Card.Content>
           </Card>
@@ -198,6 +183,7 @@ export default function App() {
           <Stack.Screen name="SearchFamilies" component={SearchFamiliesScreen} />
           <Stack.Screen name="PlantOptions" component={PlantOptionsScreen} />
           <Stack.Screen name="ProgressReport" component={ProgressReportScreen} />
+          <Stack.Screen name="FamilyProgress" component={FamilyProgressScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>

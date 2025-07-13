@@ -8,9 +8,10 @@ const { width } = Dimensions.get('window');
 
 interface UploadPhotoScreenProps {
   navigation: any;
+  route?: any;
 }
 
-export default function UploadPhotoScreen({ navigation }: UploadPhotoScreenProps) {
+export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScreenProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [plantStage, setPlantStage] = useState('');
@@ -71,9 +72,15 @@ export default function UploadPhotoScreen({ navigation }: UploadPhotoScreenProps
     // Simulate upload process
     setTimeout(() => {
       setLoading(false);
+      
+      // Update care score if callback is provided
+      if (route?.params?.onPhotoUpload) {
+        route.params.onPhotoUpload();
+      }
+      
       Alert.alert(
         'सफलता', 
-        'फोटो सफलतापूर्वक अपलोड हो गया है!',
+        'फोटो सफलतापूर्वक अपलोड हो गया है! आपकी देखभाल स्कोर बढ़ गया है।',
         [
           {
             text: 'ठीक है',
@@ -134,15 +141,6 @@ export default function UploadPhotoScreen({ navigation }: UploadPhotoScreenProps
                 onPress={takePhoto}
               >
                 कैमरा से फोटो लें
-              </Button>
-              <Button 
-                mode="outlined" 
-                icon="image"
-                style={styles.photoButton}
-                textColor="#4CAF50"
-                onPress={pickImage}
-              >
-                गैलरी से चुनें
               </Button>
             </View>
           )}

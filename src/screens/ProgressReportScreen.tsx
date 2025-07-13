@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
-import { Appbar, Card, Title, Button, Surface, Text, ProgressBar, Chip, Divider } from 'react-native-paper';
+import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
+import { Title, Button, Surface, Text, Chip } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const { width } = Dimensions.get('window');
 
 interface ProgressReportScreenProps {
   navigation: any;
 }
 
 export default function ProgressReportScreen({ navigation }: ProgressReportScreenProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
 
-  // Dynamic data based on selected period
-  const getMetricsData = () => {
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  // Simple data based on selected period
+  const getReportData = () => {
     switch (selectedPeriod) {
       case 'week':
         return {
@@ -21,10 +23,6 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
           distributedPlants: 35,
           successRate: 95,
           newAdded: 12,
-          targetProgress: 0.85,
-          plantProgress: 0.88,
-          successProgress: 0.95,
-          newProgress: 0.60
         };
       case 'year':
         return {
@@ -32,10 +30,6 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
           distributedPlants: 756,
           successRate: 99,
           newAdded: 245,
-          targetProgress: 0.89,
-          plantProgress: 0.85,
-          successProgress: 0.99,
-          newProgress: 0.82
         };
       default: // month
         return {
@@ -43,24 +37,14 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
           distributedPlants: 128,
           successRate: 98,
           newAdded: 45,
-          targetProgress: 0.75,
-          plantProgress: 0.82,
-          successProgress: 0.98,
-          newProgress: 0.65
         };
     }
   };
 
-  const metricsData = getMetricsData();
+  const reportData = getReportData();
 
   const exportReport = () => {
-    // Export functionality
     console.log('Exporting report...');
-  };
-
-  const shareReport = () => {
-    // Share functionality
-    console.log('Sharing report...');
   };
 
   return (
@@ -70,12 +54,14 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
         style={styles.backgroundGradient}
       />
       
-      <Appbar.Header style={styles.header}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#FFFFFF" />
-        <Appbar.Content title="प्रगति रिपोर्ट" titleStyle={styles.headerTitle} />
-        <Appbar.Action icon="download" onPress={exportReport} color="#FFFFFF" />
-        <Appbar.Action icon="share" onPress={shareReport} color="#FFFFFF" />
-      </Appbar.Header>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>प्रगति रिपोर्ट</Text>
+        <View style={styles.headerRight} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Period Selection */}
@@ -109,69 +95,65 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
           </View>
         </Surface>
 
-        {/* Key Metrics */}
-        <Surface style={styles.metricsContainer}>
-          <Title style={styles.sectionTitle}>मुख्य आंकड़े</Title>
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricNumber}>{metricsData.totalFamilies}</Text>
-              <Text style={styles.metricLabel}>कुल परिवार</Text>
-              <ProgressBar progress={metricsData.targetProgress} color="#4CAF50" style={styles.progressBar} />
-              <Text style={styles.progressText}>{Math.round(metricsData.targetProgress * 100)}% लक्ष्य पूरा</Text>
+        {/* Simple Statistics */}
+        <Surface style={styles.statsContainer}>
+          <Title style={styles.sectionTitle}>आंकड़े</Title>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{reportData.totalFamilies}</Text>
+              <Text style={styles.statLabel}>कुल परिवार</Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricNumber}>{metricsData.distributedPlants}</Text>
-              <Text style={styles.metricLabel}>वितरित पौधे</Text>
-              <ProgressBar progress={metricsData.plantProgress} color="#2E7D32" style={styles.progressBar} />
-              <Text style={styles.progressText}>{Math.round(metricsData.plantProgress * 100)}% सफल</Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{reportData.distributedPlants}</Text>
+              <Text style={styles.statLabel}>वितरित पौधे</Text>
             </View>
-          </View>
-          
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricNumber}>{metricsData.successRate}%</Text>
-              <Text style={styles.metricLabel}>सफलता दर</Text>
-              <ProgressBar progress={metricsData.successProgress} color="#66BB6A" style={styles.progressBar} />
-              <Text style={styles.progressText}>बहुत अच्छा</Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{reportData.successRate}%</Text>
+              <Text style={styles.statLabel}>सफलता दर</Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricNumber}>{metricsData.newAdded}</Text>
-              <Text style={styles.metricLabel}>नए जोड़े गए</Text>
-              <ProgressBar progress={metricsData.newProgress} color="#388E3C" style={styles.progressBar} />
-              <Text style={styles.progressText}>
-                {selectedPeriod === 'week' ? 'इस सप्ताह' : selectedPeriod === 'year' ? 'इस साल' : 'इस महीने'}
-              </Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{reportData.newAdded}</Text>
+              <Text style={styles.statLabel}>नए जोड़े गए</Text>
             </View>
           </View>
         </Surface>
 
-
-
-        {/* Performance Summary */}
-        <Surface style={styles.summaryContainer}>
-          <Title style={styles.sectionTitle}>प्रदर्शन सारांश</Title>
+        {/* Simple Progress Summary */}
+        <Surface style={styles.progressContainer}>
+          <Title style={styles.sectionTitle}>प्रगति सारांश</Title>
           
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>सर्वाधिक सक्रिय दिन:</Text>
-            <Text style={styles.summaryValue}>मंगलवार (19 गतिविधियां)</Text>
+          <View style={styles.progressItem}>
+            <View style={styles.progressIcon}>
+              <Text style={styles.progressEmoji}>🌱</Text>
+            </View>
+            <View style={styles.progressContent}>
+              <Text style={styles.progressTitle}>पौधे की स्थिति</Text>
+              <Text style={styles.progressValue}>98% स्वस्थ</Text>
+            </View>
           </View>
-          
-          <Divider style={styles.divider} />
-          
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>औसत दैनिक वितरण:</Text>
-            <Text style={styles.summaryValue}>12 पौधे प्रति दिन</Text>
+
+          <View style={styles.progressItem}>
+            <View style={styles.progressIcon}>
+              <Text style={styles.progressEmoji}>💧</Text>
+            </View>
+            <View style={styles.progressContent}>
+              <Text style={styles.progressTitle}>पानी की व्यवस्था</Text>
+              <Text style={styles.progressValue}>95% नियमित</Text>
+            </View>
           </View>
-          
-          <Divider style={styles.divider} />
-          
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>पिछले महीने से वृद्धि:</Text>
-            <Text style={[styles.summaryValue, styles.positiveGrowth]}>+15% ⬆️</Text>
+
+          <View style={styles.progressItem}>
+            <View style={styles.progressIcon}>
+              <Text style={styles.progressEmoji}>📸</Text>
+            </View>
+            <View style={styles.progressContent}>
+              <Text style={styles.progressTitle}>फोटो अपलोड</Text>
+              <Text style={styles.progressValue}>1,245 फोटो</Text>
+            </View>
           </View>
         </Surface>
 
-        {/* Action Buttons */}
+        {/* Export Button */}
         <Surface style={styles.actionContainer}>
           <Button
             mode="contained"
@@ -180,16 +162,7 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
             buttonColor="#4CAF50"
             onPress={exportReport}
           >
-            Excel में निर्यात करें
-          </Button>
-          <Button
-            mode="outlined"
-            icon="share-variant"
-            style={styles.actionButton}
-            textColor="#4CAF50"
-            onPress={shareReport}
-          >
-            रिपोर्ट साझा करें
+            रिपोर्ट डाउनलोड करें
           </Button>
         </Surface>
       </ScrollView>
@@ -211,11 +184,27 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: 'transparent',
     elevation: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    paddingTop: 40,
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
+  },
+  headerRight: {
+    width: 40,
   },
   scrollContent: {
     flexGrow: 1,
@@ -243,89 +232,89 @@ const styles = StyleSheet.create({
   periodChip: {
     marginRight: 8,
   },
-  metricsContainer: {
+  statsContainer: {
     padding: 20,
     backgroundColor: '#ffffff',
     borderRadius: 16,
     elevation: 6,
     marginBottom: 20,
   },
-  metricsGrid: {
+  statsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
-  metricCard: {
-    flex: 1,
+  statCard: {
+    width: '48%',
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
-    marginHorizontal: 4,
+    marginBottom: 12,
   },
-  metricNumber: {
-    fontSize: 24,
+  statNumber: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#4CAF50',
-    marginBottom: 4,
-  },
-  metricLabel: {
-    fontSize: 12,
-    color: '#666666',
-    textAlign: 'center',
     marginBottom: 8,
   },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 4,
-    width: '100%',
-  },
-  progressText: {
-    fontSize: 10,
-    color: '#888888',
+  statLabel: {
+    fontSize: 14,
+    color: '#666666',
     textAlign: 'center',
-  },
-  summaryContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 6,
-    marginBottom: 20,
-  },
-  summaryItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#333333',
-    flex: 1,
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    textAlign: 'right',
-    flex: 1,
-  },
-  positiveGrowth: {
-    color: '#4CAF50',
-  },
-  divider: {
-    backgroundColor: '#E0E0E0',
   },
   actionContainer: {
     padding: 20,
     backgroundColor: '#ffffff',
     borderRadius: 16,
     elevation: 6,
-    marginBottom: 20,
   },
   actionButton: {
-    marginBottom: 12,
     borderRadius: 8,
+  },
+  progressContainer: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    elevation: 6,
+    marginBottom: 20,
+  },
+  progressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  progressIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E8F5E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  progressEmoji: {
+    fontSize: 18,
+  },
+  progressContent: {
+    flex: 1,
+  },
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  progressDesc: {
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  progressValue: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
 });
