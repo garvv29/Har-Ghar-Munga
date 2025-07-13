@@ -33,62 +33,43 @@ function LoginScreen({ navigation }: { navigation: any }) {
     }
 
     setLoading(true);
-    
+
     try {
-      // First test the connection
+      // Test server connection (optional)
       console.log('Testing connection to server...');
       const connectionTest = await apiService.testConnection();
       console.log('Connection test result:', connectionTest);
-      
+
       if (!connectionTest.success) {
         Alert.alert('कनेक्शन त्रुटि', `सर्वर से कनेक्ट नहीं हो पा रहा है: ${connectionTest.message}`);
         return;
       }
-      
+
       console.log('Connection successful, attempting login...');
       const response = await apiService.login(email.trim(), password);
-      
       console.log('Login response:', response);
-      
-      if (response.success) {
-        // Store the token if available
-        if (response.token) {
-          apiService.setToken(response.token);
-        }
-        
-        // Navigate based on user role
-        const userRole = response.user?.role || response.role;
-        console.log('User role:', userRole);
-        
-        switch (userRole) {
-          case 'admin':
-            navigation.navigate('AdminDashboard');
-            break;
-          case 'anganwadi':
-            navigation.navigate('AnganwadiDashboard');
-            break;
-          case 'family':
-            navigation.navigate('FamilyDashboard', { 
-              userData: response.user,
-              userId: response.user?.id 
-            });
-            break;
-          default:
-            // If no specific role, try to determine from username or other fields
-            if (response.user?.username?.toUpperCase().includes('ADMIN') || 
-                response.user?.username?.toUpperCase().includes('CGCO')) {
-              navigation.navigate('AdminDashboard');
-            } else if (response.user?.username?.toUpperCase().includes('ANGANWADI') || 
-                       response.user?.username?.toUpperCase().includes('CGAB')) {
-              navigation.navigate('AnganwadiDashboard');
-            } else if (response.user?.username?.toUpperCase().includes('FAMILY') || 
-                       response.user?.username?.toUpperCase().includes('CGPV')) {
-              navigation.navigate('FamilyDashboard');
-            } else {
-              Alert.alert('त्रुटि', 'अज्ञात उपयोगकर्ता भूमिका।');
-            }
-            break;
-        }
+
+      if (response.success && response.user) {
+        const user = response.user;
+
+        const userName = user.name || '';
+        const userUsername = user.username || '';
+        const guardianName = (user as any).guardian_name || '';
+        const fatherName = (user as any).father_name || '';
+        const motherName = (user as any).mother_name || '';
+        const age = (user as any).age || '';
+
+        console.log("Student details received:", user);
+
+        // ✅ Pass data to next screen
+        navigation.navigate('FamilyDashboard', {
+          userId: userUsername,
+          name: userName,
+          age,
+          guardianName,
+          fatherName,
+          motherName,
+        });
       } else {
         Alert.alert('लॉगिन विफल', response.message || 'लॉगिन में त्रुटि हुई।');
       }

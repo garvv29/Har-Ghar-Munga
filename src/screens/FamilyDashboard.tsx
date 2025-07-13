@@ -12,6 +12,11 @@ interface FamilyDashboardProps {
     params?: {
       userData?: any;
       userId?: string;
+      name?: string;
+      age?: string;
+      guardianName?: string;
+      fatherName?: string;
+      motherName?: string;
     };
   };
 }
@@ -38,13 +43,14 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     const fetchFamilyData = async () => {
       try {
         const userId = route?.params?.userId;
-        if (userId) {
+        if (userId && !route?.params?.name) {
+          // Only fetch from API if we don't have direct name data
           console.log('Fetching family data for user ID:', userId);
           const data = await apiService.getFamilyByUserId(userId);
           setFamilyData(data);
           console.log('Family data fetched:', data);
         } else {
-          console.log('No user ID provided, using default data');
+          console.log('Using direct data from login or no user ID provided');
         }
       } catch (error) {
         console.error('Error fetching family data:', error);
@@ -55,7 +61,7 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     };
 
     fetchFamilyData();
-  }, [route?.params?.userId]);
+  }, [route?.params?.userId, route?.params?.name]);
 
   const handleUploadPhoto = () => {
     navigation.navigate('UploadPhoto', {
@@ -121,9 +127,12 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
             </View>
             <View style={styles.headerText}>
               <Title style={styles.headerTitle}>मेरा पौधा</Title>
-              <Paragraph style={styles.headerSubtitle}>
-                परिवार: {familyData?.parentName || route?.params?.userData?.name || 'लोड हो रहा है...'}
-              </Paragraph>
+              <View style={styles.familyInfo}>
+                <Text style={styles.familyLabel}>बच्चा: {route?.params?.name || familyData?.childName || 'लोड हो रहा है...'}</Text>
+                {route?.params?.age && <Text style={styles.familyAge}> (उम्र: {route.params.age} वर्ष)</Text>}
+                <Text style={styles.familyLabel}>माता: {route?.params?.motherName || 'लोड हो रहा है...'}</Text>
+                <Text style={styles.familyLabel}>पिता: {route?.params?.fatherName || 'लोड हो रहा है...'}</Text>
+              </View>
             </View>
           </View>
         </Surface>
@@ -136,9 +145,11 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
             </View>
             <View style={styles.plantInfo}>
               <Title style={styles.plantTitle}>
-                {familyData?.childName ? `${familyData.childName} का पौधा` : plantData.plantName}
+                {route?.params?.name ? `${route.params.name} का पौधा` : familyData?.childName ? `${familyData.childName} का पौधा` : plantData.plantName}
               </Title>
-              <Text style={styles.plantAge}>{plantData.plantAge}</Text>
+              <Text style={styles.plantAge}>
+                {route?.params?.age ? `${route.params.age} वर्ष का बच्चा` : plantData.plantAge}
+              </Text>
             </View>
             <Chip style={styles.healthChip} textStyle={styles.healthChipText}>
               {plantData.healthStatus}
@@ -345,6 +356,19 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: '#666666',
+  },
+  familyInfo: {
+    marginTop: 4,
+  },
+  familyLabel: {
+    fontSize: 13,
+    color: '#666666',
+    marginBottom: 2,
+  },
+  familyAge: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '500',
   },
   plantCard: {
     padding: 20,
