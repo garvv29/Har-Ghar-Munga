@@ -1,95 +1,101 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Alert, Image } from 'react-native';
-import { Card, Title, Button, Surface, Text, TextInput, Appbar, RadioButton, Chip, Dialog, Portal, Paragraph } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, TextInput, Button, Alert, ScrollView, Image, Platform, StyleSheet } from 'react-native'; // Import Platform and StyleSheet
 import * as ImagePicker from 'expo-image-picker';
-import { apiService, FamilyRegistrationData } from '../utils/api';
+import * as FileSystem from 'expo-file-system';
 
 interface AddFamilyScreenProps {
   navigation: any;
 }
 
 export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
-  const [formData, setFormData] = useState<Omit<FamilyRegistrationData, 'plantPhoto' | 'pledgePhoto'>>({
-    // बच्चे की जानकारी
+  const [formData, setFormData] = useState({
     childName: '',
-    gender: 'लड़का' as const,
+    gender: 'लड़का' as 'लड़का' | 'लड़की',
     dateOfBirth: '',
     age: '',
     weight: '',
     height: '',
     anganwadiCenterName: 'सरस्वती आंगनबाड़ी केंद्र',
-    anganwadiCode: 'AWC-123-DLH',
-    
-    // माता-पिता की जानकारी
+    anganwadiCode: 'AWC-123-DLH', // Keep this as string for parsing
     motherName: '',
     fatherName: '',
-    mobileNumber: '',
+    mobileNumber: '', // This will be the username
     village: '',
     ward: '',
     panchayat: '',
     district: '',
-    
-    // मूंगा पौधे की जानकारी
-    distributionDate: '',
-    
-    // स्थान और कर्मचारी जानकारी
-    workerName: 'श्रीमती सुनीता देवी',
-    workerCode: 'AWW-123',
+    distributionDate: '', // Not used in backend register
+    workerName: 'श्रीमती सुनीता देवी', // Mapped to guardian_name
+    workerCode: 'AWW-123', // Not used in backend register
     block: '',
-    registrationDate: new Date().toLocaleDateString('hi-IN'),
+    registrationDate: new Date().toLocaleDateString('hi-IN'), // Not used in backend register
   });
-  
+
   const [photos, setPhotos] = useState({
-    plantPhoto: null as string | null,
-    pledgePhoto: null as string | null,
+    plantPhoto: null as string | null, // This will now store the URI, not base64
+    pledgePhoto: null as string | null, // This will now store the URI, not base64
   });
-  
   const [loading, setLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Add validation function
+  const isFormValid = () => {
+    return (
+      formData.childName.trim() !== '' &&
+      formData.dateOfBirth.trim() !== '' &&
+      formData.age.trim() !== '' &&
+      formData.weight.trim() !== '' &&
+      formData.height.trim() !== '' &&
+      formData.motherName.trim() !== '' &&
+      formData.fatherName.trim() !== '' &&
+      formData.mobileNumber.trim() !== '' &&
+      formData.anganwadiCode.trim() !== '' &&
+      formData.village.trim() !== '' &&
+      formData.district.trim() !== '' &&
+      formData.block.trim() !== '' &&
+      photos.plantPhoto !== null &&
+      photos.pledgePhoto !== null
+    );
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // MODIFIED pickImage & pickFromGallery to store URI, not base64
   const pickImage = async (photoType: 'plantPhoto' | 'pledgePhoto') => {
-    // Request permission to access camera
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (permissionResult.granted === false) {
+    if (!permissionResult.granted) {
       Alert.alert('अनुमति आवश्यक', 'कैमरा का उपयोग करने के लिए अनुमति दें');
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      // base64: true, // NO LONGER NEED BASE64 HERE
     });
-
     if (!result.canceled) {
-      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri }));
+      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri })); // Store URI
     }
   };
 
   const pickFromGallery = async (photoType: 'plantPhoto' | 'pledgePhoto') => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (permissionResult.granted === false) {
+    if (!permissionResult.granted) {
       Alert.alert('अनुमति आवश्यक', 'गैलरी का उपयोग करने के लिए अनुमति दें');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      // base64: true, // NO LONGER NEED BASE64 HERE
     });
-
     if (!result.canceled) {
-      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri }));
+      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri })); // Store URI
     }
   };
 
@@ -105,671 +111,352 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     );
   };
 
-  const handleSubmit = async () => {
-    // Validate form
-    if (!formData.childName || !formData.age || !formData.motherName || !formData.fatherName || !formData.mobileNumber || !formData.village || !formData.district || !formData.block) {
-      Alert.alert('त्रुटि', 'कृपया सभी आवश्यक फील्ड भरें');
-      return;
-    }
-
-    if (!photos.plantPhoto) {
-      Alert.alert('त्रुटि', 'कृपया पौधे की फोटो अपलोड करें');
-      return;
-    }
-
-    if (!photos.pledgePhoto) {
-      Alert.alert('त्रुटि', 'कृपया शपथ पत्र की फोटो अपलोड करें');
-      return;
-    }
-
-    // Show confirmation dialog
-    setShowConfirmDialog(true);
+  const formatDateToYYYYMMDD = (dateString: string) => {
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month}-${day}`;
   };
 
   const confirmRegistration = async () => {
     setShowConfirmDialog(false);
     setLoading(true);
-    
-    // Demo registration - keeping API structure for future use
-    setTimeout(() => {
+    try {
+      const data = new FormData(); // Create FormData object
+
+      // Append text fields
+      data.append('username', formData.mobileNumber?.toUpperCase() || '');
+      data.append('name', formData.childName);
+      data.append('password', 'hgm@2025'); // Still using hardcoded password - remember my warnings!
+      data.append('guardian_name', formData.workerName);
+      data.append('father_name', formData.fatherName);
+      data.append('mother_name', formData.motherName);
+      data.append('age', formData.age); // Send as string, backend will parse int
+      data.append('dob', formatDateToYYYYMMDD(formData.dateOfBirth));
+      data.append('aanganwadi_code', String(parseInt(formData.anganwadiCode?.match(/\d+/)?.[0] || '0'))); // Parse and send as string
+      data.append('weight', formData.weight); // Send as string, backend will parse float
+      data.append('height', formData.height); // Send as string, backend will parse float
+      data.append('health_status', 'healthy');
+
+      // Address parts - append separately or as concatenated string
+      // If you want backend to combine, append individually.
+      // If backend expects combined 'address' field, combine here.
+      // Backend expects 'address' as one field, so combine on frontend.
+      const address = `${formData.village}, ${formData.ward}, ${formData.panchayat}, ${formData.district}, ${formData.block}`;
+      data.append('address', address);
+      data.append('village', formData.village); // Include these too if backend needs them separately later
+      data.append('ward', formData.ward);
+      data.append('panchayat', formData.panchayat);
+      data.append('district', formData.district);
+      data.append('block', formData.block);
+
+      // Append image files
+      if (photos.plantPhoto) {
+        data.append('plant_photo', {
+          uri: photos.plantPhoto,
+          name: 'plant_photo.jpg', // You might want a more dynamic name or rely on backend to generate
+          type: 'image/jpeg', // Adjust type if you allow other formats
+        } as any); // Use 'as any' for now, or define a proper type for Blob/File
+      }
+
+      if (photos.pledgePhoto) {
+        data.append('pledge_photo', {
+          uri: photos.pledgePhoto,
+          name: 'pledge_photo.jpg',
+          type: 'image/jpeg',
+        } as any);
+      }
+
+      console.log('Sending FormData:', data); // Console log FormData is tricky, will show as [object FormData]
+
+      const response = await fetch('https://grx6djfl-5000.inc1.devtunnels.ms/register', {
+        method: 'POST',
+        // No 'Content-Type' header needed here, fetch sets it automatically for FormData
+        body: data, // Send the FormData object directly
+      });
+
+      console.log('Response status:', response.status);
+      const result = await response.json();
+      console.log('Response data:', result);
+
+      if (response.ok && result.success) {
+        Alert.alert('सफलता!', 'बच्चे का पंजीकरण सफलतापूर्वक हो गया।', [
+          { text: 'ठीक है', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        Alert.alert('त्रुटि', result.message || 'पंजीकरण असफल रहा');
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      Alert.alert('नेटवर्क त्रुटि', 'सर्वर से कनेक्ट नहीं हो पा रहा है।');
+    } finally {
       setLoading(false);
-      
-      Alert.alert(
-        'सफलता!',
-        'बच्चे का पंजीकरण सफलतापूर्वक हो गया। परिवार ID: FAM-2025-001',
-        [{ text: 'ठीक है', onPress: () => navigation.goBack() }]
-      );
-    }, 2000);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#2E7D32', '#4CAF50', '#66BB6A']}
-        style={styles.backgroundGradient}
-      />
-      
-      {/* Header */}
-      <Appbar.Header style={styles.header}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#FFFFFF" />
-        <Appbar.Content title="नया परिवार पंजीकरण" titleStyle={styles.headerTitle} />
-      </Appbar.Header>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>नया परिवार पंजीकरण</Text>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* बच्चे की जानकारी */}
-        <Surface style={styles.formContainer}>
-          <Title style={styles.sectionTitle}>🔹 बच्चे की जानकारी</Title>
-          
-          {/* Child Name */}
-          <TextInput
-            label="बच्चे का नाम *"
-            value={formData.childName}
-            onChangeText={(text) => handleInputChange('childName', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="account" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+      {/* बच्चे की जानकारी */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>बच्चे की जानकारी</Text>
+        
+        <Text style={styles.label}>बच्चे का नाम</Text>
+        <TextInput 
+          value={formData.childName} 
+          onChangeText={(v) => handleInputChange('childName', v)} 
+          style={styles.input}
+          placeholder="बच्चे का नाम दर्ज करें"
+        />
 
-          {/* Gender */}
-          <Text style={styles.fieldLabel}>लिंग *</Text>
-          <View style={styles.radioGroup}>
-            <View style={styles.radioItem}>
-              <RadioButton
-                value="लड़का"
-                status={formData.gender === 'लड़का' ? 'checked' : 'unchecked'}
-                onPress={() => handleInputChange('gender', 'लड़का')}
-                color="#4CAF50"
-              />
-              <Text style={styles.radioLabel}>लड़का</Text>
-            </View>
-            <View style={styles.radioItem}>
-              <RadioButton
-                value="लड़की"
-                status={formData.gender === 'लड़की' ? 'checked' : 'unchecked'}
-                onPress={() => handleInputChange('gender', 'लड़की')}
-                color="#4CAF50"
-              />
-              <Text style={styles.radioLabel}>लड़की</Text>
-            </View>
-          </View>
+        <Text style={styles.label}>जन्म तिथि (dd/mm/yyyy)</Text>
+        <TextInput 
+          value={formData.dateOfBirth} 
+          onChangeText={(v) => handleInputChange('dateOfBirth', v)} 
+          style={styles.input}
+          placeholder="जन्म तिथि दर्ज करें"
+        />
 
-          {/* Date of Birth */}
-          <TextInput
-            label="जन्म तिथि (DD/MM/YYYY) *"
-            value={formData.dateOfBirth}
-            onChangeText={(text) => handleInputChange('dateOfBirth', text)}
-            mode="outlined"
-            style={styles.input}
-            placeholder="01/01/2020"
-            left={<TextInput.Icon icon="calendar" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>आयु</Text>
+        <TextInput 
+          value={formData.age} 
+          onChangeText={(v) => handleInputChange('age', v)} 
+          keyboardType="numeric" 
+          style={styles.input}
+          placeholder="आयु दर्ज करें"
+        />
 
-          {/* Age */}
-          <TextInput
-            label="आयु (वर्षों में) *"
-            value={formData.age}
-            onChangeText={(text) => handleInputChange('age', text)}
-            mode="outlined"
-            style={styles.input}
-            keyboardType="numeric"
-            placeholder="उदाहरण: 4"
-            left={<TextInput.Icon icon="clock-outline" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>वजन (kg)</Text>
+        <TextInput 
+          value={formData.weight} 
+          onChangeText={(v) => handleInputChange('weight', v)} 
+          keyboardType="numeric" 
+          style={styles.input}
+          placeholder="वजन दर्ज करें"
+        />
 
-          {/* Weight */}
-          <TextInput
-            label="वजन (किलोग्राम में)"
-            value={formData.weight}
-            onChangeText={(text) => handleInputChange('weight', text)}
-            mode="outlined"
-            style={styles.input}
-            keyboardType="numeric"
-            placeholder="उदाहरण: 15.5"
-            left={<TextInput.Icon icon="scale" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>ऊंचाई (cm)</Text>
+        <TextInput 
+          value={formData.height} 
+          onChangeText={(v) => handleInputChange('height', v)} 
+          keyboardType="numeric" 
+          style={styles.input}
+          placeholder="ऊंचाई दर्ज करें"
+        />
+      </View>
 
-          {/* Height */}
-          <TextInput
-            label="लंबाई (सेंटीमीटर में)"
-            value={formData.height}
-            onChangeText={(text) => handleInputChange('height', text)}
-            mode="outlined"
-            style={styles.input}
-            keyboardType="numeric"
-            placeholder="उदाहरण: 95"
-            left={<TextInput.Icon icon="human-male-height" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+      {/* माता-पिता की जानकारी */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>माता-पिता की जानकारी</Text>
+        
+        <Text style={styles.label}>माता का नाम</Text>
+        <TextInput 
+          value={formData.motherName} 
+          onChangeText={(v) => handleInputChange('motherName', v)} 
+          style={styles.input}
+          placeholder="माता का नाम दर्ज करें"
+        />
 
-          {/* Anganwadi Center */}
-          <TextInput
-            label="आंगनवाड़ी केंद्र का नाम"
-            value={formData.anganwadiCenterName}
-            onChangeText={(text) => handleInputChange('anganwadiCenterName', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="home-city-outline" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>पिता का नाम</Text>
+        <TextInput 
+          value={formData.fatherName} 
+          onChangeText={(v) => handleInputChange('fatherName', v)} 
+          style={styles.input}
+          placeholder="पिता का नाम दर्ज करें"
+        />
 
-          <TextInput
-            label="आंगनवाड़ी कोड"
-            value={formData.anganwadiCode}
-            onChangeText={(text) => handleInputChange('anganwadiCode', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="barcode" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
-        </Surface>
+        <Text style={styles.label}>मोबाइल नंबर (ID)</Text>
+        <TextInput 
+          value={formData.mobileNumber} 
+          onChangeText={(v) => handleInputChange('mobileNumber', v)} 
+          style={styles.input}
+          placeholder="मोबाइल नंबर दर्ज करें"
+          keyboardType="phone-pad"
+        />
 
-        {/* माता-पिता की जानकारी */}
-        <Surface style={styles.formContainer}>
-          <Title style={styles.sectionTitle}>🔹 माता-पिता / अभिभावक की जानकारी</Title>
-          
-          <TextInput
-            label="माता का नाम *"
-            value={formData.motherName}
-            onChangeText={(text) => handleInputChange('motherName', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="account-heart" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>आंगनवाड़ी कोड</Text>
+        <TextInput 
+          value={formData.anganwadiCode} 
+          onChangeText={(v) => handleInputChange('anganwadiCode', v)} 
+          style={styles.input}
+          placeholder="आंगनवाड़ी कोड दर्ज करें"
+        />
+      </View>
 
-          <TextInput
-            label="पिता का नाम / अभिभावक का नाम *"
-            value={formData.fatherName}
-            onChangeText={(text) => handleInputChange('fatherName', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="account-tie" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+      {/* पता की जानकारी */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>पता की जानकारी</Text>
+        
+        <Text style={styles.label}>गाँव</Text>
+        <TextInput 
+          value={formData.village} 
+          onChangeText={(v) => handleInputChange('village', v)} 
+          style={styles.input}
+          placeholder="गाँव का नाम दर्ज करें"
+        />
 
-          <TextInput
-            label="मोबाइल नंबर *"
-            value={formData.mobileNumber}
-            onChangeText={(text) => handleInputChange('mobileNumber', text)}
-            mode="outlined"
-            style={styles.input}
-            keyboardType="phone-pad"
-            maxLength={10}
-            left={<TextInput.Icon icon="phone" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>वार्ड</Text>
+        <TextInput 
+          value={formData.ward} 
+          onChangeText={(v) => handleInputChange('ward', v)} 
+          style={styles.input}
+          placeholder="वार्ड नंबर दर्ज करें"
+        />
 
-          <Title style={styles.subSectionTitle}>पता की जानकारी</Title>
-          
-          <TextInput
-            label="गाँव *"
-            value={formData.village}
-            onChangeText={(text) => handleInputChange('village', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="home-group" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>पंचायत</Text>
+        <TextInput 
+          value={formData.panchayat} 
+          onChangeText={(v) => handleInputChange('panchayat', v)} 
+          style={styles.input}
+          placeholder="पंचायत का नाम दर्ज करें"
+        />
 
-          <TextInput
-            label="वार्ड"
-            value={formData.ward}
-            onChangeText={(text) => handleInputChange('ward', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="map-marker-outline" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>जिला</Text>
+        <TextInput 
+          value={formData.district} 
+          onChangeText={(v) => handleInputChange('district', v)} 
+          style={styles.input}
+          placeholder="जिला का नाम दर्ज करें"
+        />
 
-          <TextInput
-            label="पंचायत"
-            value={formData.panchayat}
-            onChangeText={(text) => handleInputChange('panchayat', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="account-group" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
+        <Text style={styles.label}>विकासखंड (Block)</Text>
+        <TextInput 
+          value={formData.block} 
+          onChangeText={(v) => handleInputChange('block', v)} 
+          style={styles.input}
+          placeholder="विकासखंड का नाम दर्ज करें"
+        />
+      </View>
 
-          <TextInput
-            label="जिला *"
-            value={formData.district}
-            onChangeText={(text) => handleInputChange('district', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="map" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
-        </Surface>
-
-        {/* मूंगा पौधे की जानकारी */}
-        <Surface style={styles.formContainer}>
-          <Title style={styles.sectionTitle}>🔹 मूंगा पौधे से संबंधित जानकारी</Title>
-          
-          <TextInput
-            label="पौधा वितरण तिथि (DD/MM/YYYY) *"
-            value={formData.distributionDate}
-            onChangeText={(text) => handleInputChange('distributionDate', text)}
-            mode="outlined"
-            style={styles.input}
-            placeholder="आज की तारीख"
-            left={<TextInput.Icon icon="calendar-check" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
-        </Surface>
-
-        {/* Photo Upload Section */}
-        <Surface style={styles.photoContainer}>
-          <Title style={styles.sectionTitle}>पौधे की फोटो *</Title>
-          <Text style={styles.photoInstruction}>
-            बच्चे को मुंगे का पेड़ देते हुए फोटो लें
-          </Text>
-          
-          {photos.plantPhoto ? (
-            <View style={styles.photoPreview}>
-              <Image source={{ uri: photos.plantPhoto }} style={styles.previewImage} />
-              <Button 
-                mode="outlined" 
-                onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}
-                style={styles.changePhotoButton}
-                textColor="#4CAF50"
-              >
-                फोटो बदलें
-              </Button>
-            </View>
-          ) : (
+      {/* Photo Upload Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>फोटो अपलोड</Text>
+        
+        <Text style={styles.label}>पौधे की फोटो</Text>
+        {photos.plantPhoto ? (
+          <View style={styles.photoContainer}>
+            <Image source={{ uri: photos.plantPhoto }} style={styles.photoPreview} />
             <Button 
-              mode="contained" 
-              icon="camera"
+              title="फोटो बदलें" 
               onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}
-              style={styles.photoButton}
-              buttonColor="#4CAF50"
-            >
-              पौधे की फोटो लें
-            </Button>
-          )}
-        </Surface>
+              color="#4CAF50"
+            />
+          </View>
+        ) : (
+          <Button 
+            title="पौधे की फोटो लें" 
+            onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}
+            color="#4CAF50"
+          />
+        )}
 
-        {/* Pledge Photo Section */}
-        <Surface style={styles.photoContainer}>
-          <Title style={styles.sectionTitle}>शपथ पत्र की फोटो *</Title>
-          <Text style={styles.photoInstruction}>
-            हस्ताक्षरित शपथ पत्र की फोटो लें
-          </Text>
-          
-          {photos.pledgePhoto ? (
-            <View style={styles.photoPreview}>
-              <Image source={{ uri: photos.pledgePhoto }} style={styles.previewImage} />
-              <Button 
-                mode="outlined" 
-                onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}
-                style={styles.changePhotoButton}
-                textColor="#4CAF50"
-              >
-                फोटो बदलें
-              </Button>
-            </View>
-          ) : (
+        <Text style={styles.label}>शपथ पत्र की फोटो</Text>
+        {photos.pledgePhoto ? (
+          <View style={styles.photoContainer}>
+            <Image source={{ uri: photos.pledgePhoto }} style={styles.photoPreview} />
             <Button 
-              mode="contained" 
-              icon="camera"
+              title="फोटो बदलें" 
               onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}
-              style={styles.photoButton}
-              buttonColor="#4CAF50"
-            >
-              शपथ पत्र की फोटो लें
-            </Button>
-          )}
-        </Surface>
-
-        {/* स्थान और कर्मचारी जानकारी */}
-        <Surface style={styles.formContainer}>
-          <Title style={styles.sectionTitle}>🔹 स्थान और कर्मचारी जानकारी</Title>
-          
-          <TextInput
-            label="आंगनबाड़ी कार्यकर्ता का नाम"
-            value={formData.workerName}
-            onChangeText={(text) => handleInputChange('workerName', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="account-star" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
+              color="#4CAF50"
+            />
+          </View>
+        ) : (
+          <Button 
+            title="शपथ पत्र की फोटो लें" 
+            onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}
+            color="#4CAF50"
           />
+        )}
+      </View>
 
-          <TextInput
-            label="कार्यकर्ता कोड"
-            value={formData.workerCode}
-            onChangeText={(text) => handleInputChange('workerCode', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="card-account-details" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
-
-          <TextInput
-            label="विकासखंड (Block) *"
-            value={formData.block}
-            onChangeText={(text) => handleInputChange('block', text)}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="city" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
-
-          <TextInput
-            label="रजिस्ट्रेशन की तारीख"
-            value={formData.registrationDate}
-            editable={false}
-            mode="outlined"
-            style={[styles.input, styles.disabledInput]}
-            left={<TextInput.Icon icon="calendar-today" color="#4CAF50" />}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#4CAF50"
-            theme={{ colors: { primary: '#4CAF50' } }}
-          />
-        </Surface>
-
-        {/* Submit Button */}
-        <Button 
-          mode="contained" 
-          onPress={handleSubmit}
-          loading={loading}
-          disabled={loading}
-          style={styles.submitButton}
-          contentStyle={styles.submitButtonContent}
-          labelStyle={styles.submitButtonText}
-          buttonColor="#2E7D32"
-        >
-          {loading ? 'पंजीकरण हो रहा है...' : 'पंजीकरण करें'}
-        </Button>
-      </ScrollView>
-
-      {/* Confirmation Dialog */}
-      <Portal>
-        <Dialog visible={showConfirmDialog} onDismiss={() => setShowConfirmDialog(false)}>
-          <Dialog.Title style={styles.dialogTitle}>पंजीकरण की पुष्टि करें</Dialog.Title>
-          <Dialog.Content>
-            <Surface style={styles.confirmationCard}>
-              <Text style={styles.confirmationTitle}>🔹 बच्चे की जानकारी</Text>
-              <Text style={styles.confirmationText}>नाम: {formData.childName}</Text>
-              <Text style={styles.confirmationText}>लिंग: {formData.gender}</Text>
-              <Text style={styles.confirmationText}>आयु: {formData.age} वर्ष</Text>
-              {formData.weight && <Text style={styles.confirmationText}>वजन: {formData.weight} किग्रा</Text>}
-              {formData.height && <Text style={styles.confirmationText}>लंबाई: {formData.height} सेमी</Text>}
-              
-              <Text style={[styles.confirmationTitle, { marginTop: 16 }]}>🔹 माता-पिता की जानकारी</Text>
-              <Text style={styles.confirmationText}>माता का नाम: {formData.motherName}</Text>
-              <Text style={styles.confirmationText}>पिता का नाम: {formData.fatherName}</Text>
-              <Text style={styles.confirmationText}>मोबाइल: {formData.mobileNumber}</Text>
-              <Text style={styles.confirmationText}>गाँव: {formData.village}</Text>
-              <Text style={styles.confirmationText}>जिला: {formData.district}</Text>
-              
-              <Text style={[styles.confirmationTitle, { marginTop: 16 }]}>🔹 लॉगिन विवरण</Text>
-              <Surface style={styles.loginCredentials}>
-                <Text style={styles.credentialLabel}>यूजरनेम:</Text>
-                <Text style={styles.credentialValue}>{formData.mobileNumber}</Text>
-                <Text style={styles.credentialLabel}>पासवर्ड:</Text>
-                <Text style={styles.credentialValue}>{formData.mobileNumber}</Text>
-                <Text style={styles.credentialNote}>
-                  📱 अपने मोबाइल नंबर से लॉगिन करें
-                </Text>
-              </Surface>
-            </Surface>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setShowConfirmDialog(false)} textColor="#666">
-              रद्द करें
-            </Button>
-            <Button onPress={confirmRegistration} mode="contained" buttonColor="#2E7D32">
-              पुष्टि करें
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-    </View>
+      <View style={styles.submitContainer}>
+        <Button
+          title={loading ? 'पंजीकरण हो रहा है...' : 'पंजीकरण करें'}
+          onPress={confirmRegistration}
+          disabled={loading || !isFormValid()}
+          color={isFormValid() ? '#ffffff' : '#cccccc'}
+        />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: 'transparent',
-    elevation: 0,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  scrollContent: {
-    flexGrow: 1,
+    backgroundColor: '#4CAF50',
     padding: 20,
-    paddingBottom: 100,
-  },
-  formContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 6,
-    marginBottom: 20,
+    alignItems: 'center',
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  section: {
+    backgroundColor: '#ffffff',
+    margin: 10,
+    padding: 15,
+    borderRadius: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 16,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  subSectionTitle: {
+  label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2E7D32',
-    marginTop: 16,
-    marginBottom: 12,
+    color: '#333333',
+    marginTop: 10,
+    marginBottom: 5,
   },
   input: {
-    marginBottom: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-  },
-  fieldLabel: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 8,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  radioGroup: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    justifyContent: 'space-around',
-  },
-  radioItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioLabel: {
-    fontSize: 14,
-    color: '#1a1a1a',
-    marginLeft: 4,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  chip: {
-    backgroundColor: '#F5F5F5',
-  },
-  selectedChip: {
-    backgroundColor: '#E8F5E8',
-  },
-  chipText: {
-    color: '#666666',
-  },
-  selectedChipText: {
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-  disabledInput: {
-    opacity: 0.7,
+    backgroundColor: '#fafafa',
   },
   photoContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 6,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
     alignItems: 'center',
-  },
-  photoInstruction: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  photoButton: {
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 24,
+    marginBottom: 15,
   },
   photoPreview: {
-    alignItems: 'center',
-  },
-  previewImage: {
     width: 200,
     height: 150,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
   },
-  changePhotoButton: {
-    borderRadius: 12,
-  },
-  submitButton: {
-    borderRadius: 12,
-    elevation: 4,
-    shadowColor: '#4CAF50',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  submitButtonContent: {
-    paddingVertical: 12,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Dialog styles
-  dialogTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2E7D32',
-    textAlign: 'center',
-  },
-  confirmationCard: {
-    padding: 16,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    marginVertical: 8,
-  },
-  confirmationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2E7D32',
-    marginBottom: 8,
-  },
-  confirmationText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 4,
-    paddingLeft: 8,
-  },
-  loginCredentials: {
-    backgroundColor: '#E8F5E8',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  credentialLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2E7D32',
-    marginTop: 4,
-  },
-  credentialValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    backgroundColor: '#fff',
-    padding: 8,
-    borderRadius: 6,
-    marginTop: 2,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  credentialNote: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginTop: 4,
+  submitContainer: {
+    backgroundColor: '#4CAF50',
+    margin: 10,
+    padding: 15,
+    borderRadius: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });

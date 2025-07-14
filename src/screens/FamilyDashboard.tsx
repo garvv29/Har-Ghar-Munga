@@ -17,6 +17,7 @@ interface FamilyDashboardProps {
       guardianName?: string;
       fatherName?: string;
       motherName?: string;
+      aanganwadi_code?: string;
     };
   };
 }
@@ -40,6 +41,9 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
 
   // Fetch family data when component mounts
   useEffect(() => {
+    console.log("Route params received:", route?.params);
+    console.log("Aanganwadi code in dashboard:", route?.params?.aanganwadi_code);
+    
     const fetchFamilyData = async () => {
       try {
         const userId = route?.params?.userId;
@@ -128,10 +132,13 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
             <View style={styles.headerText}>
               <Title style={styles.headerTitle}>मेरा पौधा</Title>
               <View style={styles.familyInfo}>
-                <Text style={styles.familyLabel}>बच्चा: {route?.params?.name || familyData?.childName || 'लोड हो रहा है...'}</Text>
-                {route?.params?.age && <Text style={styles.familyAge}> (उम्र: {route.params.age} वर्ष)</Text>}
+                <View style={styles.nameAgeRow}>
+                  <Text style={styles.familyLabel}>नाम: {route?.params?.name || familyData?.childName || 'लोड हो रहा है...'}</Text>
+                  {route?.params?.age && <Text style={styles.familyAge}> (उम्र: {route.params.age} वर्ष)</Text>}
+                </View>
                 <Text style={styles.familyLabel}>माता: {route?.params?.motherName || 'लोड हो रहा है...'}</Text>
                 <Text style={styles.familyLabel}>पिता: {route?.params?.fatherName || 'लोड हो रहा है...'}</Text>
+                <Text style={styles.familyLabel}>आंगनबाड़ी कोड: {route?.params?.aanganwadi_code || 'लोड हो रहा है...'}</Text>
               </View>
             </View>
           </View>
@@ -147,9 +154,7 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
               <Title style={styles.plantTitle}>
                 {route?.params?.name ? `${route.params.name} का पौधा` : familyData?.childName ? `${familyData.childName} का पौधा` : plantData.plantName}
               </Title>
-              <Text style={styles.plantAge}>
-                {route?.params?.age ? `${route.params.age} वर्ष का बच्चा` : plantData.plantAge}
-              </Text>
+              <Text style={styles.plantAge}>{plantData.plantAge}</Text>
             </View>
             <Chip style={styles.healthChip} textStyle={styles.healthChipText}>
               {plantData.healthStatus}
@@ -359,6 +364,11 @@ const styles = StyleSheet.create({
   },
   familyInfo: {
     marginTop: 4,
+  },
+  nameAgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   familyLabel: {
     fontSize: 13,

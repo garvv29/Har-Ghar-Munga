@@ -52,24 +52,77 @@ function LoginScreen({ navigation }: { navigation: any }) {
       if (response.success && response.user) {
         const user = response.user;
 
-        const userName = user.name || '';
-        const userUsername = user.username || '';
-        const guardianName = (user as any).guardian_name || '';
-        const fatherName = (user as any).father_name || '';
-        const motherName = (user as any).mother_name || '';
-        const age = (user as any).age || '';
+        // Store the token if available
+        if (response.token) {
+          apiService.setToken(response.token);
+        }
+        
+        // Navigate based on user role
+        const userRole = response.user?.role || response.role;
+        console.log('User role:', userRole);
+        
+        switch (userRole) {
+          case 'admin':
+            navigation.navigate('AdminDashboard');
+            break;
+          case 'anganwadi':
+            navigation.navigate('AnganwadiDashboard');
+            break;
+          case 'family':
+            const userName = user.name || '';
+            const userUsername = user.username || '';
+            const guardianName = (user as any).guardian_name || '';
+            const fatherName = (user as any).father_name || '';
+            const motherName = (user as any).mother_name || '';
+            const age = (user as any).age || '';
+            const aanganwadi_code = (user as any).aanganwadi_code || (user as any).center_code || (user as any).anganwadi_center_code || '';
+            console.log("Aanganwadi code:", aanganwadi_code);
+            console.log("Full user object:", user);
+            console.log("Student details received:", user);
 
-        console.log("Student details received:", user);
-
-        // ✅ Pass data to next screen
-        navigation.navigate('FamilyDashboard', {
-          userId: userUsername,
-          name: userName,
-          age,
-          guardianName,
-          fatherName,
-          motherName,
-        });
+            navigation.navigate('FamilyDashboard', {
+              userId: userUsername,
+              name: userName,
+              age,
+              guardianName,
+              fatherName,
+              motherName,
+              aanganwadi_code,
+            });
+            break;
+          default:
+            // If no specific role, try to determine from username or other fields
+            if (response.user?.username?.toUpperCase().includes('ADMIN') || 
+                response.user?.username?.toUpperCase().includes('CGCO')) {
+              navigation.navigate('AdminDashboard');
+            } else if (response.user?.username?.toUpperCase().includes('ANGANWADI') || 
+                       response.user?.username?.toUpperCase().includes('CGAB')) {
+              navigation.navigate('AnganwadiDashboard');
+            } else if (response.user?.username?.toUpperCase().includes('FAMILY') || 
+                       response.user?.username?.toUpperCase().includes('CGPV')) {
+              // Family user - extract and pass family details
+              const userName = user.name || '';
+              const userUsername = user.username || '';
+              const guardianName = (user as any).guardian_name || '';
+              const fatherName = (user as any).father_name || '';
+              const motherName = (user as any).mother_name || '';
+              const age = (user as any).age || '';
+              const aanganwadi_code = (user as any).aanganwadi_code || (user as any).center_code || (user as any).anganwadi_center_code || '';
+              
+              navigation.navigate('FamilyDashboard', {
+                userId: userUsername,
+                name: userName,
+                age,
+                guardianName,
+                fatherName,
+                motherName,
+                aanganwadi_code,
+              });
+            } else {
+              Alert.alert('त्रुटि', 'अज्ञात उपयोगकर्ता भूमिका।');
+            }
+            break;
+        }
       } else {
         Alert.alert('लॉगिन विफल', response.message || 'लॉगिन में त्रुटि हुई।');
       }
