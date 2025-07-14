@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, ScrollView, Image, Platform, StyleSheet } from 'react-native'; // Import Platform and StyleSheet
+import { View, Text, TextInput, Button, Alert, ScrollView, Image, Platform, StyleSheet, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
@@ -71,8 +71,7 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false, // Remove crop functionality
       quality: 1,
       // base64: true, // NO LONGER NEED BASE64 HERE
     });
@@ -89,8 +88,7 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false, // Remove crop functionality
       quality: 1,
       // base64: true, // NO LONGER NEED BASE64 HERE
     });
@@ -100,15 +98,8 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
   };
 
   const showImageOptions = (photoType: 'plantPhoto' | 'pledgePhoto', title: string) => {
-    Alert.alert(
-      'फोटो चुनें',
-      title,
-      [
-        { text: 'कैमरा', onPress: () => pickImage(photoType) },
-        { text: 'गैलरी', onPress: () => pickFromGallery(photoType) },
-        { text: 'रद्द करें', style: 'cancel' },
-      ]
-    );
+    // Directly open camera instead of showing options
+    pickImage(photoType);
   };
 
   const formatDateToYYYYMMDD = (dateString: string) => {
@@ -334,45 +325,51 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
         <Text style={styles.sectionTitle}>फोटो अपलोड</Text>
         
         <Text style={styles.label}>पौधे की फोटो</Text>
-        {photos.plantPhoto ? (
-          <View style={styles.photoContainer}>
-            <Image source={{ uri: photos.plantPhoto }} style={styles.photoPreview} />
-            <Button 
-              title="फोटो बदलें" 
-              onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}
-              color="#4CAF50"
-            />
-          </View>
-        ) : (
-          <Button 
-            title="पौधे की फोटो लें" 
-            onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}
-            color="#4CAF50"
-          />
-        )}
+        <View style={styles.uploadBlock}>
+          {photos.plantPhoto ? (
+            <View style={styles.photoContainer}>
+              <Image source={{ uri: photos.plantPhoto }} style={styles.photoPreview} />
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}>
+                <Text style={styles.cameraButtonText}>📷 नई फोटो लें</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.photoContainer}>
+              <View style={styles.photoPlaceholder}>
+                <Text style={styles.photoPlaceholderText}>कोई फोटो नहीं</Text>
+              </View>
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}>
+                <Text style={styles.cameraButtonText}>📷 पौधे की फोटो लें</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         <Text style={styles.label}>शपथ पत्र की फोटो</Text>
-        {photos.pledgePhoto ? (
-          <View style={styles.photoContainer}>
-            <Image source={{ uri: photos.pledgePhoto }} style={styles.photoPreview} />
-            <Button 
-              title="फोटो बदलें" 
-              onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}
-              color="#4CAF50"
-            />
-          </View>
-        ) : (
-          <Button 
-            title="शपथ पत्र की फोटो लें" 
-            onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}
-            color="#4CAF50"
-          />
-        )}
+        <View style={styles.uploadBlock}>
+          {photos.pledgePhoto ? (
+            <View style={styles.photoContainer}>
+              <Image source={{ uri: photos.pledgePhoto }} style={styles.photoPreview} />
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}>
+                <Text style={styles.cameraButtonText}>📷 नई फोटो लें</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.photoContainer}>
+              <View style={styles.photoPlaceholder}>
+                <Text style={styles.photoPlaceholderText}>कोई फोटो नहीं</Text>
+              </View>
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}>
+                <Text style={styles.cameraButtonText}>📷 शपथ पत्र की फोटो लें</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
-      <View style={styles.submitContainer}>
+      <View style={[styles.submitContainer, { backgroundColor: isFormValid() ? '#2E7D32' : '#E0E0E0' }]}>
         <Button
-          title={loading ? 'पंजीकरण हो रहा है...' : 'पंजीकरण करें'}
+          title={loading ? '⏳ पंजीकरण हो रहा है...' : '✅ पंजीकरण करें'}
           onPress={confirmRegistration}
           disabled={loading || !isFormValid()}
           color={isFormValid() ? '#ffffff' : '#cccccc'}
@@ -438,25 +435,72 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  uploadBlock: {
+    marginBottom: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   photoPreview: {
-    width: 200,
-    height: 150,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 2,
+    width: 220,
+    height: 160,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 3,
     borderColor: '#4CAF50',
+    backgroundColor: '#e8f5e9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  submitContainer: {
+  photoPlaceholder: {
+    width: 220,
+    height: 160,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#BDBDBD',
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderText: {
+    color: '#BDBDBD',
+    fontSize: 16,
+  },
+  cameraButton: {
     backgroundColor: '#4CAF50',
-    margin: 10,
-    padding: 15,
-    borderRadius: 10,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    marginBottom: 5,
+  },
+  cameraButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  submitContainer: {
+    backgroundColor: '#2E7D32',
+    margin: 10,
+    padding: 20,
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
 });
