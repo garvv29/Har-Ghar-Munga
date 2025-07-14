@@ -65,6 +65,12 @@ export interface FamilyData {
   centerName: string;
   workerName: string;
   status: 'active' | 'inactive';
+  totalImagesYet?: number;
+  plant_photo?: string | null;
+  pledge_photo?: string | null;
+  motherName?: string;
+  fatherName?: string;
+  anganwadiCode?: string;
 }
 
 export interface ProgressReportData {
@@ -391,6 +397,13 @@ class ApiService {
       console.error('File upload failed:', error);
       throw error;
     }
+  }
+
+  // Get total images uploaded (global)
+  async getTotalImages(): Promise<{ totalImages: number }> {
+    return this.makeRequest<{ totalImages: number }>('/photos/total', {
+      method: 'GET',
+    });
   }
 }
 

@@ -25,7 +25,7 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     panchayat: '',
     district: '',
     distributionDate: '', // Not used in backend register
-    workerName: 'श्रीमती सुनीता देवी', // Mapped to guardian_name
+    workerName: '', // Mapped to guardian_name
     workerCode: 'AWW-123', // Not used in backend register
     block: '',
     registrationDate: new Date().toLocaleDateString('hi-IN'), // Not used in backend register

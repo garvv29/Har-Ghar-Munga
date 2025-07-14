@@ -2,9 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions, Image, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Surface, Text, FAB, Chip, ProgressBar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { apiService, FamilyData } from '../utils/api';
+import { apiService, FamilyData } from '../utils/api'; // Import FamilyData from utils/api
 
 const { width } = Dimensions.get('window');
+
+// IMPORTANT: You MUST update your api.ts file to reflect this interface change.
+// For now, I'm defining it here for demonstration, but it should live in utils/api.ts
+// interface FamilyData {
+//   childName: string;
+//   gender: string;
+//   dateOfBirth: string;
+//   age: string;
+//   weight: string;
+//   height: string;
+//   anganwadiCenterName: string;
+//   anganwadiCode: string;
+//   motherName: string;
+//   fatherName: string;
+//   mobileNumber: string;
+//   village: string;
+//   ward: string;
+//   panchayat: string;
+//   district: string;
+//   block: string;
+//   registrationDate: string;
+//   plant_photo: string | null; // Assuming these are URLs/paths now
+//   pledge_photo: string | null; // Assuming these are URLs/paths now
+//   totalImagesYet: number; // <--- NEW FIELD
+//   // Add other fields returned by your API
+// }
+
 
 interface FamilyDashboardProps {
   navigation: any;
@@ -23,6 +50,8 @@ interface FamilyDashboardProps {
 }
 
 export default function FamilyDashboard({ navigation, route }: FamilyDashboardProps) {
+  // Initialize plantData.photoCount based on a potential future fetched value
+  // and ensure it's a number. This will be updated by fetched data.
   const [plantData, setPlantData] = useState({
     plantName: 'मूंनगा पौधा #123',
     plantAge: '45 दिन',
@@ -30,14 +59,19 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     growthStage: 'बढ़ रहा है',
     lastWatered: 'आज, सुबह 8:00',
     nextWatering: 'कल, सुबह 8:00',
-    photoCount: 12,
-    careScore: 85,
+    photoCount: 0, // Initialize to 0, will be updated by fetched totalImagesYet
+    // Remove careScore from here
   });
 
   const [waterCompleted, setWaterCompleted] = useState(false);
   const [latestPhotoUri, setLatestPhotoUri] = useState<string | null>(null);
   const [familyData, setFamilyData] = useState<FamilyData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [totalImagesYet, setTotalImagesYet] = useState<number>(0);
+
+  // Calculate careScore from totalImagesYet
+  const TOTAL_IMAGES_TO_BE_UPLOADED = 8;
+  const careScore = Math.round((totalImagesYet / TOTAL_IMAGES_TO_BE_UPLOADED) * 100);
 
   // Fetch family data when component mounts
   useEffect(() => {
@@ -48,13 +82,39 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
       try {
         const userId = route?.params?.userId;
         if (userId && !route?.params?.name) {
-          // Only fetch from API if we don't have direct name data
           console.log('Fetching family data for user ID:', userId);
-          const data = await apiService.getFamilyByUserId(userId);
+          // Assuming apiService.getFamilyByUserId returns FamilyData
+          const data: FamilyData = await apiService.getFamilyByUserId(userId);
           setFamilyData(data);
+          // Set totalImagesYet and update plantData's photoCount
+          setTotalImagesYet(data.totalImagesYet || 0); // Default to 0 if not present
+          setPlantData(prev => ({
+            ...prev,
+            photoCount: data.totalImagesYet || 0, // Set initial photoCount from backend
+            plant_photo: data.plant_photo || null, // Assuming you want to display this
+            pledge_photo: data.pledge_photo || null, // Assuming you want to display this
+            // You might want to update other plantData fields here from 'data' as well
+          }));
+          // If you have a primary photo (e.g., plant_photo) to display as latest:
+          if (data.plant_photo) {
+             setLatestPhotoUri(`https://grx6djfl-5000.inc1.devtunnels.ms/uploads/${data.plant_photo}`); // Adjust URL if needed
+          }
+
+
           console.log('Family data fetched:', data);
         } else {
-          console.log('Using direct data from login or no user ID provided');
+          // If data comes from route params (e.g., after login), populate state from there
+          // This block needs adjustment if you want totalImagesYet from params as well
+          setLoading(false); // Set loading to false if not fetching from API
+          // For initial data from login route params, you would set initial values here.
+          // Since totalImagesYet isn't in route params, it implies API fetch is the primary source.
+          if (route?.params?.userData?.totalImagesYet !== undefined) {
+             setTotalImagesYet(route.params.userData.totalImagesYet);
+             setPlantData(prev => ({
+                ...prev,
+                photoCount: route?.params?.userData?.totalImagesYet,
+             }));
+          }
         }
       } catch (error) {
         console.error('Error fetching family data:', error);
@@ -65,17 +125,24 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     };
 
     fetchFamilyData();
-  }, [route?.params?.userId, route?.params?.name]);
+  }, [route?.params?.userId, route?.params?.name, route?.params?.userData]); // Add userData to dependencies
 
   const handleUploadPhoto = () => {
+    // When a photo is uploaded, we'll increment locally and expect a backend call
+    // to update the actual count and trigger a re-fetch or a direct update.
     navigation.navigate('UploadPhoto', {
       onPhotoUpload: (uri?: string) => {
+        setTotalImagesYet(prev => prev + 1); // Also update the dedicated totalImagesYet state
         setPlantData(prev => ({
           ...prev,
-          photoCount: prev.photoCount + 1,
-          careScore: Math.min(prev.careScore + 10, 100)
+          photoCount: prev.photoCount + 1, // Increment local count
+          // careScore: Math.min(prev.careScore + 10, 100) // This line is removed
         }));
         if (uri) setLatestPhotoUri(uri);
+        // Ideally, after successful upload, you'd re-fetch the student data
+        // to get the true, updated totalImagesYet from the backend.
+        // For simplicity, we are updating locally here.
+        // Or you would modify the 'UploadPhoto' screen to return the new totalImagesYet from API.
       }
     });
   };
@@ -87,8 +154,6 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
   const handleViewCareTips = () => {
     navigation.navigate('CareTips');
   };
-
-
 
   const handleWaterPlant = () => {
     setWaterCompleted(true);
@@ -102,6 +167,14 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     }));
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>जानकारी लोड हो रही है...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -110,17 +183,6 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
       />
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Latest Photo */}
-        {latestPhotoUri && (
-          <Surface style={styles.latestPhotoContainer}>
-            <Title style={styles.sectionTitle}>नवीनतम फोटो</Title>
-            <Image
-              source={{ uri: latestPhotoUri }}
-              style={styles.latestPhoto}
-              resizeMode="cover"
-            />
-          </Surface>
-        )}
         {/* Header */}
         <Surface style={styles.header}>
           <View style={styles.headerContent}>
@@ -136,9 +198,9 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
                   <Text style={styles.familyLabel}>नाम: {route?.params?.name || familyData?.childName || 'लोड हो रहा है...'}</Text>
                   {route?.params?.age && <Text style={styles.familyAge}> (उम्र: {route.params.age} वर्ष)</Text>}
                 </View>
-                <Text style={styles.familyLabel}>माता: {route?.params?.motherName || 'लोड हो रहा है...'}</Text>
-                <Text style={styles.familyLabel}>पिता: {route?.params?.fatherName || 'लोड हो रहा है...'}</Text>
-                <Text style={styles.familyLabel}>आंगनबाड़ी कोड: {route?.params?.aanganwadi_code || 'लोड हो रहा है...'}</Text>
+                <Text style={styles.familyLabel}>माता: {route?.params?.motherName || familyData?.motherName || 'लोड हो रहा है...'}</Text>
+                <Text style={styles.familyLabel}>पिता: {route?.params?.fatherName || familyData?.fatherName || 'लोड हो रहा है...'}</Text>
+                <Text style={styles.familyLabel}>आंगनबाड़ी कोड: {route?.params?.aanganwadi_code || familyData?.anganwadiCode || 'लोड हो रहा है...'}</Text>
               </View>
             </View>
           </View>
@@ -164,11 +226,17 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
           <View style={styles.careProgress}>
             <Text style={styles.progressLabel}>देखभाल स्कोर</Text>
             <ProgressBar 
-              progress={plantData.careScore / 100} 
+              progress={careScore / 100} 
               color="#4CAF50" 
               style={styles.progressBar}
             />
-            <Text style={styles.progressText}>{plantData.careScore}%</Text>
+            <Text style={styles.progressText}>{careScore}%</Text>
+          </View>
+
+          {/* Display Total Images Yet */}
+          <View style={styles.careProgress}>
+            <Text style={styles.progressLabel}>अपलोड की गई कुल तस्वीरें</Text>
+            <Text style={styles.progressText}>{totalImagesYet}</Text>
           </View>
         </Surface>
 
@@ -187,6 +255,18 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
             </Button>
           </View>
         </Surface>
+
+        {/* Latest Photo (moved here) */}
+        {latestPhotoUri && (
+          <Surface style={styles.latestPhotoContainer}>
+            <Title style={styles.sectionTitle}>नवीनतम फोटो</Title>
+            <Image
+              source={{ uri: latestPhotoUri }}
+              style={styles.latestPhoto}
+              resizeMode="cover"
+            />
+          </Surface>
+        )}
 
         {/* Plant Care Schedule */}
         <Surface style={styles.scheduleContainer}>
@@ -640,4 +720,4 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 10,
   },
-}); 
+});
