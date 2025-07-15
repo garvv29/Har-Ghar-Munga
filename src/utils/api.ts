@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'https://grx6djfl-5000.inc1.devtunnels.ms'; // Change this to your actual backend URL
+export const API_BASE_URL = 'https://grx6djfl-5001.inc1.devtunnels.ms'; // Change this to your actual backend URL
 
 // API Response Types
 export interface LoginResponse {

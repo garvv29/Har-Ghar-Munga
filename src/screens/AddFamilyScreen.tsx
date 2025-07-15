@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Alert, ScrollView, Image, Platform, StyleSheet, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { API_BASE_URL } from '../utils/api';
 
 interface AddFamilyScreenProps {
   navigation: any;
@@ -158,7 +159,7 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
 
       console.log('Sending FormData:', data); // Console log FormData is tricky, will show as [object FormData]
 
-      const response = await fetch('https://grx6djfl-5000.inc1.devtunnels.ms/register', {
+      const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         // No 'Content-Type' header needed here, fetch sets it automatically for FormData
         body: data, // Send the FormData object directly

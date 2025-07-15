@@ -33,7 +33,7 @@ function LoginScreen({ navigation }: { navigation: any }) {
     }
 
     setLoading(true);
-
+    
     try {
       // Test server connection (optional)
       console.log('Testing connection to server...');
@@ -44,7 +44,7 @@ function LoginScreen({ navigation }: { navigation: any }) {
         Alert.alert('कनेक्शन त्रुटि', `सर्वर से कनेक्ट नहीं हो पा रहा है: ${connectionTest.message}`);
         return;
       }
-
+      
       console.log('Connection successful, attempting login...');
       const response = await apiService.login(email.trim(), password);
       console.log('Login response:', response);
@@ -63,11 +63,11 @@ function LoginScreen({ navigation }: { navigation: any }) {
         
         switch (userRole) {
           case 'admin':
-            navigation.navigate('AdminDashboard');
-            break;
+          navigation.navigate('AdminDashboard');
+          break;
           case 'anganwadi':
-            navigation.navigate('AnganwadiDashboard');
-            break;
+          navigation.navigate('AnganwadiDashboard');
+          break;
           case 'family':
             const userName = user.name || '';
             const userUsername = user.username || '';
@@ -89,8 +89,8 @@ function LoginScreen({ navigation }: { navigation: any }) {
               motherName,
               aanganwadi_code,
             });
-            break;
-          default:
+          break;
+        default:
             // If no specific role, try to determine from username or other fields
             if (response.user?.username?.toUpperCase().includes('ADMIN') || 
                 response.user?.username?.toUpperCase().includes('CGCO')) {
@@ -121,8 +121,8 @@ function LoginScreen({ navigation }: { navigation: any }) {
             } else {
               Alert.alert('त्रुटि', 'अज्ञात उपयोगकर्ता भूमिका।');
             }
-            break;
-        }
+          break;
+      }
       } else {
         Alert.alert('लॉगिन विफल', response.message || 'लॉगिन में त्रुटि हुई।');
       }

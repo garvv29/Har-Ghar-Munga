@@ -3,7 +3,8 @@ import { StyleSheet, View, ScrollView, Alert, ActivityIndicator } from 'react-na
 import { Card, Title, Button, Surface, Text, TextInput, Appbar, Chip, Avatar, IconButton } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Keyboard } from 'react-native'; 
-
+import {  } from '../utils/api';
+import { API_BASE_URL } from '../utils/api';
 interface SearchFamiliesScreenProps {
   navigation: any;
 }
@@ -20,8 +21,7 @@ interface FamilyData {
 
 const apiService = {
   searchFamilies: async (query: string, signal?: AbortSignal): Promise<FamilyData[]> => {
-    const baseUrl = 'https://grx6djfl-5000.inc1.devtunnels.ms';
-    let url = `${baseUrl}/search?query=${encodeURIComponent(query)}`;
+    let url = `${API_BASE_URL}/search?query=${encodeURIComponent(query)}`;
     
     console.log("FETCHING URL:", url); 
     

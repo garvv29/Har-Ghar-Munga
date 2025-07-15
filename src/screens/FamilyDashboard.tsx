@@ -3,6 +3,7 @@ import { StyleSheet, View, ScrollView, Dimensions, Image, Alert } from 'react-na
 import { Card, Title, Paragraph, Button, Surface, Text, FAB, Chip, ProgressBar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService, FamilyData } from '../utils/api'; // Import FamilyData from utils/api
+import { API_BASE_URL } from '../utils/api';
 
 const { width } = Dimensions.get('window');
 
@@ -97,7 +98,7 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
           }));
           // If you have a primary photo (e.g., plant_photo) to display as latest:
           if (data.plant_photo) {
-             setLatestPhotoUri(`https://grx6djfl-5000.inc1.devtunnels.ms/uploads/${data.plant_photo}`); // Adjust URL if needed
+             setLatestPhotoUri(`${API_BASE_URL}/uploads/${data.plant_photo}`); // Use API_BASE_URL
           }
 
 
