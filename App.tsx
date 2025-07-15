@@ -9,7 +9,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AnganwadiDashboard from './src/screens/AnganwadiDashboard';
 import FamilyDashboard from './src/screens/FamilyDashboard';
-import AdminDashboard from './src/screens/AdminDashboard';
 import UploadPhotoScreen from './src/screens/UploadPhotoScreen';
 import AddFamilyScreen from './src/screens/AddFamilyScreen';
 import SearchFamiliesScreen from './src/screens/SearchFamiliesScreen';
@@ -63,7 +62,7 @@ function LoginScreen({ navigation }: { navigation: any }) {
         
         switch (userRole) {
           case 'admin':
-          navigation.navigate('AdminDashboard');
+          Alert.alert('Admin dashboard is disabled.');
           break;
           case 'anganwadi':
           navigation.navigate('AnganwadiDashboard');
@@ -94,7 +93,7 @@ function LoginScreen({ navigation }: { navigation: any }) {
             // If no specific role, try to determine from username or other fields
             if (response.user?.username?.toUpperCase().includes('ADMIN') || 
                 response.user?.username?.toUpperCase().includes('CGCO')) {
-              navigation.navigate('AdminDashboard');
+              Alert.alert('Admin dashboard is disabled.');
             } else if (response.user?.username?.toUpperCase().includes('ANGANWADI') || 
                        response.user?.username?.toUpperCase().includes('CGAB')) {
               navigation.navigate('AnganwadiDashboard');
@@ -249,7 +248,6 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="AnganwadiDashboard" component={AnganwadiDashboard} />
           <Stack.Screen name="FamilyDashboard" component={FamilyDashboard} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
           <Stack.Screen name="UploadPhoto" component={UploadPhotoScreen} />
           <Stack.Screen name="AddFamily" component={AddFamilyScreen} />
           <Stack.Screen name="SearchFamilies" component={SearchFamiliesScreen} />

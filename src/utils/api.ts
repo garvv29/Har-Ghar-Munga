@@ -409,3 +409,12 @@ class ApiService {
 
 // Create and export API service instance
 export const apiService = new ApiService(API_BASE_URL); 
+
+// Fetch total families and total photos uploaded from /search2
+export async function fetchTotalFamiliesAndPhotos() {
+  const response = await fetch(`${API_BASE_URL}/search2`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch totals');
+  }
+  return response.json();
+} 

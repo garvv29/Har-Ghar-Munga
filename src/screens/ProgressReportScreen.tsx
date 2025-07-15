@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
-import { Title, Button, Surface, Text } from 'react-native-paper';
+import { Title, Surface, Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { fetchTotalFamiliesAndPhotos } from '../utils/api';
 
 interface ProgressReportScreenProps {
   navigation: any;
@@ -13,8 +14,22 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
   };
 
   // Static data for total families and photo uploads
-  const totalFamilies = 156;
-  const photoUploads = 1245;
+  const [loading, setLoading] = useState(true);
+  const [totalFamilies, setTotalFamilies] = useState<number | null>(null);
+  const [photoUploads, setPhotoUploads] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchTotalFamiliesAndPhotos()
+      .then((data) => {
+        setTotalFamilies(data.total_students);
+        setPhotoUploads(data.total_images_uploaded);
+      })
+      .catch(() => {
+        setTotalFamilies(null);
+        setPhotoUploads(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -33,21 +48,30 @@ export default function ProgressReportScreen({ navigation }: ProgressReportScree
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Total Families Card */}
         <Surface style={styles.statsContainer}>
-          <Title style={styles.sectionTitle}>कुल परिवार</Title>
-          <View style={styles.statsRow}>
-            <View style={styles.statCardWide}>
-              <Text style={styles.statNumber}>{totalFamilies}</Text>
-              <Text style={styles.statLabel}>कुल परिवार</Text>
+          {loading ? (
+            <View style={{ alignItems: 'center', padding: 48 }}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={{ marginTop: 16, color: '#4CAF50', fontSize: 18 }}>लोड हो रहा है...</Text>
             </View>
-            <View style={styles.statCardWide}>
-              <Text style={styles.statNumber}>{totalFamilies}</Text>
-              <Text style={styles.statLabel}>वितरित पौधे</Text>
-            </View>
-          </View>
-          <View style={styles.statCardFull}>
-            <Text style={styles.statNumber}>{photoUploads}</Text>
-            <Text style={styles.statLabel}>फोटो अपलोड</Text>
-          </View>
+          ) : (
+            <>
+              <View style={styles.statCardFuller}>
+                <Text style={styles.statEmoji}>👨‍👩‍👧‍👦</Text>
+                <Text style={styles.statNumber}>{totalFamilies !== null ? totalFamilies : '-'}</Text>
+                <Text style={styles.statLabel}>कुल परिवार</Text>
+              </View>
+              <View style={styles.statCardFuller}>
+                <Text style={styles.statEmoji}>🌱</Text>
+                <Text style={styles.statNumber}>{totalFamilies !== null ? totalFamilies : '-'}</Text>
+                <Text style={styles.statLabel}>वितरित पौधे</Text>
+              </View>
+              <View style={styles.statCardFuller}>
+                <Text style={styles.statEmoji}>📸</Text>
+                <Text style={styles.statNumber}>{photoUploads !== null ? photoUploads : '-'}</Text>
+                <Text style={styles.statLabel}>फोटो अपलोड</Text>
+              </View>
+            </>
+          )}
         </Surface>
       </ScrollView>
     </View>
@@ -105,34 +129,32 @@ const styles = StyleSheet.create({
   statsGrid: {
     display: 'none', // Remove old grid
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  statCardWide: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    marginRight: 8,
-  },
   statCardFull: {
     width: '100%',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 32,
+    paddingHorizontal: 16,
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
   },
+  statCardFuller: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 18,
+    marginBottom: 24,
+    elevation: 3,
+  },
   statNumber: {
-    fontSize: 28,
+    fontSize: 40,
     fontWeight: 'bold',
     color: '#4CAF50',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 18,
     color: '#666666',
     textAlign: 'center',
   },
@@ -150,5 +172,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     marginBottom: 16,
+  },
+  statEmoji: {
+    fontSize: 36,
+    marginBottom: 4,
   },
 });
