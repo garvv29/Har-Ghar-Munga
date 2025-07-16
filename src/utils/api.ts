@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
+
 // API Configuration
-export const API_BASE_URL = 'https://grx6djfl-5001.inc1.devtunnels.ms'; // Change this to your actual backend URL
+export const API_BASE_URL = 'https://grx6djfl-5001.inc1.devtunnels.ms'; // Your actual backend URL - keep this!
 
 // API Response Types
 export interface LoginResponse {
@@ -66,11 +68,21 @@ export interface FamilyData {
   workerName: string;
   status: 'active' | 'inactive';
   totalImagesYet?: number;
-  plant_photo?: string | null;
-  pledge_photo?: string | null;
+  plant_photo?: string | null; // This will store the latest plant photo URL/path
+  pledge_photo?: string | null; // This will store the latest pledge photo URL/path
   motherName?: string;
   fatherName?: string;
   anganwadiCode?: string;
+  // Add other fields from your Family Dashboard fetch if they are part of FamilyData
+  age?: string;
+  gender?: string;
+  weight?: string;
+  height?: string;
+  panchayat?: string;
+  district?: string;
+  block?: string;
+  dateOfBirth?: string;
+  // ... any other fields you fetch and use for FamilyData
 }
 
 export interface ProgressReportData {
@@ -86,12 +98,14 @@ export interface ProgressReportData {
   }>;
 }
 
-export interface PhotoUploadData {
-  familyId: string;
-  plantStage: string;
-  description?: string;
-  photoUri: string;
-}
+// NOTE: We are moving away from this specific PhotoUploadData interface for `makeRequest`'s JSON body
+// as we are now using FormData for plant photo uploads.
+// export interface PhotoUploadData {
+//   familyId: string;
+//   plantStage: string;
+//   description?: string;
+//   photoUri: string;
+// }
 
 // API Service Class
 class ApiService {
@@ -105,14 +119,18 @@ class ApiService {
   // Set authentication token
   setToken(token: string) {
     this.token = token;
+    // Persist token using AsyncStorage here if not done via Axios interceptor
+    // For now, relying on explicit setting/clearing and `getHeaders`
   }
 
   // Clear authentication token
   clearToken() {
     this.token = null;
+    // Clear from AsyncStorage as well
+    // Storage.removeItem('userToken');
   }
 
-  // Get headers for API requests
+  // Get headers for API requests (for JSON data)
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -125,7 +143,7 @@ class ApiService {
     return headers;
   }
 
-  // Generic API request method
+  // Generic API request method for JSON payloads
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -134,7 +152,7 @@ class ApiService {
     
     const config: RequestInit = {
       ...options,
-      headers: this.getHeaders(),
+      headers: this.getHeaders(), // Use getHeaders for JSON content-type
     };
 
     console.log('Making API request to:', url);
@@ -149,7 +167,13 @@ class ApiService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Response error text:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        // Try to parse error as JSON if it looks like it
+        try {
+            const errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.message || `HTTP error! status: ${response.status}, message: ${errorText}`);
+        } catch (parseError) {
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
       }
       
       const data = await response.json();
@@ -175,16 +199,26 @@ class ApiService {
 
   // Authentication APIs
   async login(username: string, password: string): Promise<LoginResponse> {
-    return this.makeRequest<LoginResponse>('/login', {
+    const response = await this.makeRequest<LoginResponse>('/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
+    // Assuming backend sends token in response.user.token or directly in response.token
+    if (response.success && response.token) {
+      this.setToken(response.token);
+      await AsyncStorage.setItem('userToken', response.token); // Persist token on login
+    }
+    return response;
   }
 
   async logout(): Promise<{ success: boolean; message: string }> {
-    return this.makeRequest<{ success: boolean; message: string }>('/logout', {
+    const response = await this.makeRequest<{ success: boolean; message: string }>('/logout', {
       method: 'POST',
     });
+    if (response.success) {
+      this.clearToken(); // Clear token on successful logout
+    }
+    return response;
   }
 
   async register(userData: any): Promise<{ success: boolean; message: string; userId?: string }> {
@@ -239,7 +273,10 @@ class ApiService {
   }
 
   async getFamilyByUserId(userId: string): Promise<FamilyData> {
-    return this.makeRequest<FamilyData>(`/families/user/${userId}`, {
+    // We already have a getFamilyDetails that takes familyId.
+    // Assuming userId IS the familyId for simplicity in the backend, or your backend maps userId to familyId.
+    // If your backend endpoint for userId is different, adjust /families/user/${userId}
+    return this.makeRequest<FamilyData>(`/families/user/${userId}`, { 
       method: 'GET',
     });
   }
@@ -254,167 +291,182 @@ class ApiService {
     });
   }
 
-  // Photo Upload APIs
-  async uploadPhoto(photoData: PhotoUploadData): Promise<{
-    success: boolean;
-    message: string;
-    photoId: string;
-  }> {
-    return this.makeRequest<{
-      success: boolean;
-      message: string;
-      photoId: string;
-    }>('/photos/upload', {
-      method: 'POST',
-      body: JSON.stringify(photoData),
-    });
+  // Photo Upload APIs - **THIS IS THE NEW/MODIFIED METHOD**
+  // This method is now dedicated to uploading plant photos with specific metadata
+  async uploadPlantPhoto(
+    imageUri: string,
+    username: string,
+    name: string,
+    plantStage: string,
+    description: string,
+    // Add familyId if your backend needs it to link the photo,
+    // though username should be sufficient for mapping to a family.
+    // familyId?: string // Optional: if your backend needs familyId explicitly
+  ): Promise<{ success: boolean; message: string; photoId?: string; fileUrl?: string }> {
+    const formData = new FormData();
+    const uriParts = imageUri.split('.');
+    const fileExtension = uriParts[uriParts.length - 1]; 
+    const fileName = `plant_photo_${username}_${Date.now()}.${fileExtension}`; 
+    
+    let mimeType = `image/${fileExtension.toLowerCase()}`;
+    if (fileExtension.toLowerCase() === 'jpg') {
+        mimeType = 'image/jpeg';
+    }
+
+    formData.append('username', username);
+    formData.append('name', name); // Parent/child name
+    formData.append('plant_stage', plantStage);
+    formData.append('description', description);
+    // if (familyId) formData.append('familyId', familyId); // If needed by backend
+
+    formData.append('photo', {
+      uri: imageUri,
+      name: fileName,
+      type: mimeType, 
+    } as any);
+
+    // This endpoint should be where your Flask backend handles file uploads for plant photos
+    const url = `${this.baseURL}/upload_plant_photo`; // **CONFIRM THIS ENDPOINT IN YOUR FLASK BACKEND**
+    
+    console.log('Uploading plant photo to:', url);
+    console.log('FormData:', formData); // For debugging: check formData content
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          // 'Content-Type': 'multipart/form-data' is typically set automatically by fetch
+          // when you pass FormData as body, but explicitly setting it doesn't hurt.
+        },
+        body: formData,
+      });
+
+      console.log('Upload Photo Response Status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Upload Photo Response Error Text:', errorText);
+        try {
+            const errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.message || `HTTP error! status: ${response.status}, message: ${errorText}`);
+        } catch (parseError) {
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+      }
+
+      const data = await response.json();
+      console.log('Upload Photo Response Data:', data);
+      return data;
+    } catch (error) {
+      console.error('Plant photo upload failed:', error);
+      throw error;
+    }
   }
 
-  async getFamilyPhotos(familyId: string): Promise<Array<{
-    id: string;
-    photoUri: string;
-    plantStage: string;
-    description?: string;
-    uploadDate: string;
-  }>> {
-    return this.makeRequest<Array<{
-      id: string;
-      photoUri: string;
-      plantStage: string;
-      description?: string;
-      uploadDate: string;
-    }>>(`/photos/family/${familyId}`, {
-      method: 'GET',
-    });
-  }
-
-  // Progress Report APIs
-  async getProgressReport(period: 'week' | 'month' | 'year', centerCode?: string): Promise<ProgressReportData> {
-    const endpoint = centerCode 
-      ? `/reports/progress?period=${period}&centerCode=${centerCode}`
-      : `/reports/progress?period=${period}`;
-    return this.makeRequest<ProgressReportData>(endpoint, {
-      method: 'GET',
-    });
-  }
-
-  async exportReport(period: 'week' | 'month' | 'year', centerCode?: string): Promise<{
-    success: boolean;
-    message: string;
-    downloadUrl: string;
-  }> {
-    const endpoint = centerCode 
-      ? `/reports/export?period=${period}&centerCode=${centerCode}`
-      : `/reports/export?period=${period}`;
-    return this.makeRequest<{
-      success: boolean;
-      message: string;
-      downloadUrl: string;
-    }>(endpoint, {
-      method: 'GET',
-    });
-  }
-
-  // Dashboard Statistics APIs
-  async getDashboardStats(centerCode?: string): Promise<{
-    totalFamilies: number;
-    distributedPlants: number;
-    activeFamilies: number;
-    successRate: number;
-    recentActivities: Array<{
-      date: string;
-      activity: string;
-      type: string;
-    }>;
-  }> {
-    const endpoint = centerCode ? `/dashboard/stats?centerCode=${centerCode}` : '/dashboard/stats';
-    return this.makeRequest<{
-      totalFamilies: number;
-      distributedPlants: number;
-      activeFamilies: number;
-      successRate: number;
-      recentActivities: Array<{
-        date: string;
-        activity: string;
-        type: string;
-      }>;
-    }>(endpoint, {
-      method: 'GET',
-    });
-  }
-
-  // Plant Options APIs
-  async getPlantOptions(): Promise<Array<{
-    id: number;
-    name: string;
-    hindiName: string;
-    emoji: string;
-    description: string;
-  }>> {
-    return this.makeRequest<Array<{
-      id: number;
-      name: string;
-      hindiName: string;
-      emoji: string;
-      description: string;
-    }>>('/plants/options', {
-      method: 'GET',
-    });
-  }
-
-  // File Upload Helper
-  async uploadFile(fileUri: string, type: 'photo' | 'document'): Promise<{
+  // --- EXISTING BUT MODIFIED uploadFile for generic file uploads (not plant photos specifically) ---
+  // This is now more generic for other file types if needed.
+  // The 'type' parameter will dictate content for the backend.
+  // You might not use this for plant photos anymore if 'uploadPlantPhoto' is preferred.
+  async uploadFile(fileUri: string, type: 'photo' | 'document', additionalData?: { [key: string]: string }): Promise<{
     success: boolean;
     message: string;
     fileUrl: string;
   }> {
     const formData = new FormData();
+    const uriParts = fileUri.split('.');
+    const fileExtension = uriParts[uriParts.length - 1]; 
+    const fileName = `generic_file_${Date.now()}.${fileExtension}`; 
+    let mimeType = `application/octet-stream`; // Default for generic files
+
+    if (type === 'photo') {
+        if (fileExtension.toLowerCase() === 'png') mimeType = 'image/png';
+        else if (fileExtension.toLowerCase() === 'jpg' || fileExtension.toLowerCase() === 'jpeg') mimeType = 'image/jpeg';
+    } else if (type === 'document') {
+        if (fileExtension.toLowerCase() === 'pdf') mimeType = 'application/pdf';
+        // Add other document types as needed
+    }
+
     formData.append('file', {
       uri: fileUri,
-      type: 'image/jpeg',
-      name: 'upload.jpg',
+      type: mimeType,
+      name: fileName,
     } as any);
-    formData.append('type', type);
+    formData.append('type', type); // This 'type' tells backend what kind of file it is (photo/document)
 
-    const url = `${this.baseURL}/upload/file`;
+    // Append any additional data provided
+    if (additionalData) {
+      for (const key in additionalData) {
+        formData.append(key, additionalData[key]);
+      }
+    }
+
+    const url = `${this.baseURL}/upload/file`; // Your generic file upload endpoint
     
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.token}`,
+          // 'Content-Type': 'multipart/form-data' is implicitly set by fetch
         },
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        try {
+            const errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.message || `HTTP error! status: ${response.status}, message: ${errorText}`);
+        } catch (parseError) {
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
       }
 
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('File upload failed:', error);
+      console.error('Generic file upload failed:', error);
       throw error;
     }
   }
 
-  // Get total images uploaded (global)
+  // Get total images uploaded (global) - this looks like a generic endpoint
   async getTotalImages(): Promise<{ totalImages: number }> {
     return this.makeRequest<{ totalImages: number }>('/photos/total', {
       method: 'GET',
     });
+  }
+
+  // Fetch total families and total photos uploaded from /search2 - Keep if still used
+  // This function is outside the class, which is fine if it doesn't need 'this.token'
+  // but it's often better to put all API calls within the ApiService class for consistency.
+  // If `search2` needs authentication, it should be moved into `ApiService` and use `makeRequest`.
+  async fetchTotalFamiliesAndPhotosExternal() { // Renamed to avoid clash if moved into class
+    try {
+      const response = await fetch(`${API_BASE_URL}/search2`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch totals: ${errorText}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching total families and photos:', error);
+      throw error;
+    }
   }
 }
 
 // Create and export API service instance
 export const apiService = new ApiService(API_BASE_URL); 
 
-// Fetch total families and total photos uploaded from /search2
+// The fetchTotalFamiliesAndPhotos function was originally outside the class.
+// It's generally better to put all API logic inside the class.
+// If you still need this exact function as is, keep it, but consider moving it.
 export async function fetchTotalFamiliesAndPhotos() {
   const response = await fetch(`${API_BASE_URL}/search2`);
   if (!response.ok) {
     throw new Error('Failed to fetch totals');
   }
   return response.json();
-} 
+}

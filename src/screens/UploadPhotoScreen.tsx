@@ -1,14 +1,41 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions, Alert } from 'react-native';
-import { Card, Title, Paragraph, Button, Surface, Text, TextInput, Chip } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Dimensions, Alert, Image } from 'react-native';
+import { Card, Title, Paragraph, Button, Surface, Text, TextInput, Chip, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+
+// Assuming you have an apiService with an uploadPhoto method.
+// You will need to define this in your src/utils/api.ts
+import { apiService } from '../utils/api'; 
+
+
+interface UploadResponse {
+  success: boolean;
+  message: string;
+  photo_url: string;
+  total_images_uploaded: number;
+  is_moringa: boolean | null; // This is the new field
+  confidence: number | null; // This is the new field
+}
+
 
 const { width } = Dimensions.get('window');
 
 interface UploadPhotoScreenProps {
   navigation: any;
-  route?: any;
+  route?: {
+    params?: {
+      username: string; // Ensure these are always strings
+      name: string;     // Ensure these are always strings
+      // MODIFIED: onPhotoUpload now accepts prediction message, is_moringa, and confidence
+      onPhotoUpload?: (
+        uploadedImageUri: string, 
+        predictionMessage?: string, 
+        isMoringa?: boolean | null, 
+        confidence?: number | null
+      ) => void;
+    };
+  };
 }
 
 export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScreenProps) {
@@ -16,86 +43,123 @@ export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScre
   const [description, setDescription] = useState('');
   const [plantStage, setPlantStage] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Directly access username and name from route.params,
+  // assuming they are always passed (as per previous discussion).
+  const username = route?.params?.username || '';
+  const name = route?.params?.name || '';
+
+  // Request permissions once when component mounts
+  useEffect(() => {
+    (async () => {
+      // Request camera and media library permissions
+      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      const { status: mediaLibraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (cameraStatus !== 'granted' || mediaLibraryStatus !== 'granted') {
+        Alert.alert(
+          'अनुमति आवश्यक', 
+          'फोटो लेने और अपलोड करने के लिए कैमरा और गैलरी दोनों की अनुमति आवश्यक है।',
+          [{ text: 'ठीक है', onPress: () => navigation.goBack() }] // Go back if permissions not granted
+        );
+      }
+    })();
+  }, []); // Run only once on mount
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('अनुमति आवश्यक', 'फोटो अपलोड करने के लिए गैलरी की अनुमति आवश्यक है।');
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: true, // Allow user to crop/edit
+      aspect: [4, 3],     // Enforce aspect ratio
+      quality: 0.7,       // Slightly reduced quality for faster uploads, still good visuals
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       setSelectedImage(result.assets[0].uri);
     }
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('अनुमति आवश्यक', 'फोटो लेने के लिए कैमरा की अनुमति आवश्यक है।');
-      return;
-    }
-
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: true, // Allow user to crop/edit
+      aspect: [4, 3],     // Enforce aspect ratio
+      quality: 0.7,       // Slightly reduced quality for faster uploads
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       setSelectedImage(result.assets[0].uri);
     }
   };
 
   const handleUpload = async () => {
+    // Client-side validation:
     if (!selectedImage) {
       Alert.alert('चेतावनी', 'कृपया एक फोटो चुनें।');
       return;
     }
-
     if (!plantStage) {
       Alert.alert('चेतावनी', 'कृपया पौधे की अवस्था चुनें।');
       return;
     }
+    // Ensure username and name are available
+    if (!username || !name) {
+      Alert.alert('त्रुटि', 'उपयोगकर्ता की जानकारी उपलब्ध नहीं है। कृपया पुनः लॉग इन करें।');
+      navigation.navigate('Login'); // Redirect to login if user data is missing
+      return;
+    }
 
     setLoading(true);
-    
-    // Simulate upload process
-    setTimeout(() => {
-      setLoading(false);
-      
-      // Update care score if callback is provided
+
+    try {
+      // Use the apiService to upload the photo
+      // Explicitly cast the response to the defined interface for better type safety
+      const responseData: UploadResponse = await apiService.uploadPlantPhoto(
+        selectedImage,
+        username,
+        name,
+        plantStage,
+        description
+      ) as UploadResponse; // <-- The fix is here: type assertion to resolve the error
+
+      console.log('Upload successful:', responseData);
+
+      // MODIFIED: Call the callback function provided by FamilyDashboard 
+      // with the prediction message, is_moringa, and confidence
       if (route?.params?.onPhotoUpload) {
-        route.params.onPhotoUpload(selectedImage);
+        route.params.onPhotoUpload(
+          selectedImage, // Pass the local URI
+          responseData.message, 
+          responseData.is_moringa, 
+          responseData.confidence
+        ); 
       }
       
+      // Use the message from the backend response directly for the alert
       Alert.alert(
         'सफलता', 
-        'फोटो सफलतापूर्वक अपलोड हो गया है! आपकी देखभाल स्कोर बढ़ गया है।',
+        responseData.message, // Use the dynamic message from backend here!
         [
           {
             text: 'ठीक है',
-            onPress: () => navigation.goBack(),
+            onPress: () => navigation.goBack(), // Go back to FamilyDashboard
           },
         ]
       );
-    }, 2000);
+
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'फोटो अपलोड करने में कुछ गलत हो गया। कृपया पुनः प्रयास करें।';
+      Alert.alert('त्रुटि', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const plantStages = [
     { label: 'नया पौधा', value: 'new' },
     { label: 'बढ़ रहा है', value: 'growing' },
     { label: 'पत्तियां आ रही हैं', value: 'leaves' },
-    { label: 'फूल आ रहे हैं', value: 'flowering' },
+    { label: 'फूल आ रहे हैं',value: 'flowering' },
     { label: 'फल आ रहे हैं', value: 'fruiting' },
   ];
 
@@ -121,14 +185,14 @@ export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScre
           
           {selectedImage ? (
             <View style={styles.imagePreview}>
-              <Text style={styles.previewText}>फोटो चुना गया है</Text>
+              <Image source={{ uri: selectedImage }} style={styles.selectedImage} resizeMode="contain" />
               <Button 
                 mode="outlined" 
                 onPress={() => setSelectedImage(null)}
                 style={styles.changeButton}
                 textColor="#4CAF50"
               >
-                बदलें
+                फोटो बदलें
               </Button>
             </View>
           ) : (
@@ -141,6 +205,15 @@ export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScre
                 onPress={takePhoto}
               >
                 कैमरा से फोटो लें
+              </Button>
+              <Button 
+                mode="outlined" 
+                icon="image"
+                style={styles.photoButton}
+                textColor="#4CAF50"
+                onPress={pickImage}
+              >
+                गैलरी से फोटो चुनें
               </Button>
             </View>
           )}
@@ -203,7 +276,9 @@ export default function UploadPhotoScreen({ navigation, route }: UploadPhotoScre
             style={styles.uploadButton}
             buttonColor="#2E7D32"
             loading={loading}
-            disabled={loading || !selectedImage || !plantStage}
+            // Button is disabled if loading, no image selected, no plant stage selected,
+            // or if username/name are empty (which should be handled by validation above too)
+            disabled={loading || !selectedImage || !plantStage || !username || !name}
             onPress={handleUpload}
           >
             {loading ? 'अपलोड हो रहा है...' : 'फोटो अपलोड करें'}
@@ -312,6 +387,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5E8',
     borderRadius: 12,
   },
+  selectedImage: {
+    width: '100%', // Take full width of its container
+    height: 200,   // Fixed height for preview
+    borderRadius: 8,
+    marginBottom: 15,
+  },
   previewText: {
     fontSize: 16,
     color: '#4CAF50',
@@ -419,4 +500,4 @@ const styles = StyleSheet.create({
     color: '#666666',
     flex: 1,
   },
-}); 
+});
