@@ -1,58 +1,35 @@
+// src/screens/FamilyDashboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions, Image, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Surface, Text, FAB, Chip, ProgressBar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { apiService, FamilyData } from '../utils/api'; // Import FamilyData from utils/api
+import { apiService, FamilyData } from '../utils/api';
 import { API_BASE_URL } from '../utils/api';
 
 const { width } = Dimensions.get('window');
-
-// IMPORTANT: You MUST update your api.ts file to reflect this interface change.
-// For now, I'm defining it here for demonstration, but it should live in utils/api.ts
-// interface FamilyData {
-//   childName: string;
-//   gender: string;
-//   dateOfBirth: string;
-//   age: string;
-//   weight: string;
-//   height: string;
-//   anganwadiCenterName: string;
-//   anganwadiCode: string;
-//   motherName: string;
-//   fatherName: string;
-//   mobileNumber: string;
-//   village: string;
-//   ward: string;
-//   panchayat: string;
-//   district: string;
-//   block: string;
-//   registrationDate: string;
-//   plant_photo: string | null; // Assuming these are URLs/paths now
-//   pledge_photo: string | null; // Assuming these are URLs/paths now
-//   totalImagesYet: number; // <--- NEW FIELD
-//   // Add other fields returned by your API
-// }
-
 
 interface FamilyDashboardProps {
   navigation: any;
   route?: {
     params?: {
       userData?: any;
-      userId?: string;
-      name?: string;
+      userId?: string; // This is the username from login
+      name?: string;  // This is the user's name from login
       age?: string;
       guardianName?: string;
       fatherName?: string;
       motherName?: string;
       aanganwadi_code?: string;
+      // NEW: Add parameters for AI prediction results
+      uploadedPredictionMessage?: string; // Message from backend (e.g., success/failure/moringa/not moringa)
+      uploadedIsMoringa?: boolean | null; // True if moringa, False if not, null if prediction failed
+      uploadedConfidence?: number | null; // Confidence score
     };
   };
 }
 
 export default function FamilyDashboard({ navigation, route }: FamilyDashboardProps) {
-  // Initialize plantData.photoCount based on a potential future fetched value
-  // and ensure it's a number. This will be updated by fetched data.
   const [plantData, setPlantData] = useState({
     plantName: 'मूंनगा पौधा #123',
     plantAge: '45 दिन',
@@ -60,8 +37,7 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     growthStage: 'बढ़ रहा है',
     lastWatered: 'आज, सुबह 8:00',
     nextWatering: 'कल, सुबह 8:00',
-    photoCount: 0, // Initialize to 0, will be updated by fetched totalImagesYet
-    // Remove careScore from here
+    photoCount: 0,
   });
 
   const [waterCompleted, setWaterCompleted] = useState(false);
@@ -70,52 +46,56 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
   const [loading, setLoading] = useState(true);
   const [totalImagesYet, setTotalImagesYet] = useState<number>(0);
 
-  // Calculate careScore from totalImagesYet
+  // NEW STATE: To store prediction results received from UploadPhotoScreen
+  const [aiPredictionStatus, setAiPredictionStatus] = useState<string | null>(null);
+  const [aiIsMoringa, setAiIsMoringa] = useState<boolean | null>(null);
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+
+  const username = route?.params?.userId || '';
+  const name = route?.params?.name || '';
+
   const TOTAL_IMAGES_TO_BE_UPLOADED = 8;
   const careScore = Math.round((totalImagesYet / TOTAL_IMAGES_TO_BE_UPLOADED) * 100);
 
-  // Fetch family data when component mounts
   useEffect(() => {
-    console.log("Route params received:", route?.params);
+    console.log("Route params received in FamilyDashboard:", route?.params);
     console.log("Aanganwadi code in dashboard:", route?.params?.aanganwadi_code);
+// NEW: Capture prediction results from route params if they exist
+    if (route?.params?.uploadedPredictionMessage) {
+      setAiPredictionStatus(route.params.uploadedPredictionMessage);
+      // Safely assign, converting 'undefined' to 'null' for the state variables
+      setAiIsMoringa(route.params.uploadedIsMoringa === undefined ? null : route.params.uploadedIsMoringa);
+      setAiConfidence(route.params.uploadedConfidence === undefined ? null : route.params.uploadedConfidence);
+      // Clear these params after using them to avoid stale data on subsequent visits
+       // Clear these params after using them to avoid stale data on subsequent visits
+      navigation.setParams({
+        uploadedPredictionMessage: undefined,
+        uploadedIsMoringa: undefined,
+        uploadedConfidence: undefined
+      });
+    }
+    
     
     const fetchFamilyData = async () => {
       try {
         const userId = route?.params?.userId;
-        if (userId && !route?.params?.name) {
+        if (userId) {
           console.log('Fetching family data for user ID:', userId);
-          // Assuming apiService.getFamilyByUserId returns FamilyData
           const data: FamilyData = await apiService.getFamilyByUserId(userId);
           setFamilyData(data);
-          // Set totalImagesYet and update plantData's photoCount
-          setTotalImagesYet(data.totalImagesYet || 0); // Default to 0 if not present
+          setTotalImagesYet(data.totalImagesYet || 0);
           setPlantData(prev => ({
             ...prev,
-            photoCount: data.totalImagesYet || 0, // Set initial photoCount from backend
-            plant_photo: data.plant_photo || null, // Assuming you want to display this
-            pledge_photo: data.pledge_photo || null, // Assuming you want to display this
-            // You might want to update other plantData fields here from 'data' as well
+            photoCount: data.totalImagesYet || 0,
           }));
-          // If you have a primary photo (e.g., plant_photo) to display as latest:
           if (data.plant_photo) {
-             setLatestPhotoUri(`${API_BASE_URL}/uploads/${data.plant_photo}`); // Use API_BASE_URL
+             setLatestPhotoUri(`${API_BASE_URL}/uploads/${data.plant_photo}`);
           }
-
-
           console.log('Family data fetched:', data);
         } else {
-          // If data comes from route params (e.g., after login), populate state from there
-          // This block needs adjustment if you want totalImagesYet from params as well
-          setLoading(false); // Set loading to false if not fetching from API
-          // For initial data from login route params, you would set initial values here.
-          // Since totalImagesYet isn't in route params, it implies API fetch is the primary source.
-          if (route?.params?.userData?.totalImagesYet !== undefined) {
-             setTotalImagesYet(route.params.userData.totalImagesYet);
-             setPlantData(prev => ({
-                ...prev,
-                photoCount: route?.params?.userData?.totalImagesYet,
-             }));
-          }
+          console.warn('FamilyDashboard received without userId in route.params.');
+          Alert.alert('त्रुटि', 'उपयोगकर्ता की जानकारी उपलब्ध नहीं है। कृपया पुनः लॉग इन करें।');
+          navigation.navigate('Login');
         }
       } catch (error) {
         console.error('Error fetching family data:', error);
@@ -126,24 +106,34 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
     };
 
     fetchFamilyData();
-  }, [route?.params?.userId, route?.params?.name, route?.params?.userData]); // Add userData to dependencies
+ }, [route?.params?.userId, navigation, route?.params?.uploadedPredictionMessage, route?.params?.uploadedIsMoringa, route?.params?.uploadedConfidence]); // Added new route params to dependencies
 
   const handleUploadPhoto = () => {
-    // When a photo is uploaded, we'll increment locally and expect a backend call
-    // to update the actual count and trigger a re-fetch or a direct update.
     navigation.navigate('UploadPhoto', {
-      onPhotoUpload: (uri?: string) => {
-        setTotalImagesYet(prev => prev + 1); // Also update the dedicated totalImagesYet state
+      username: username,
+      name: name,
+      onPhotoUpload: (
+        uploadedImageUri: string, 
+        predictionMessage?: string, 
+        isMoringa?: boolean | null, 
+        confidence?: number | null
+      ) => {
+        // Update local state with the new total image count and latest photo URI
+        setTotalImagesYet(prev => prev + 1);
         setPlantData(prev => ({
           ...prev,
-          photoCount: prev.photoCount + 1, // Increment local count
-          // careScore: Math.min(prev.careScore + 10, 100) // This line is removed
+          photoCount: prev.photoCount + 1,
         }));
-        if (uri) setLatestPhotoUri(uri);
-        // Ideally, after successful upload, you'd re-fetch the student data
-        // to get the true, updated totalImagesYet from the backend.
-        // For simplicity, we are updating locally here.
-        // Or you would modify the 'UploadPhoto' screen to return the new totalImagesYet from API.
+        if (uploadedImageUri) setLatestPhotoUri(uploadedImageUri);
+        
+        // NEW: Store the prediction results in the component's state
+        // Safely assign, converting 'undefined' to 'null' for the state variables
+        setAiPredictionStatus(predictionMessage || null);
+        setAiIsMoringa(isMoringa === undefined ? null : isMoringa);
+        setAiConfidence(confidence === undefined ? null : confidence);
+
+        // Optionally, re-fetch full family data to ensure complete sync
+        // fetchFamilyData(); // Uncomment if you want to aggressively sync after upload
       }
     });
   };
@@ -196,7 +186,7 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
               <Title style={styles.headerTitle}>मेरा पौधा</Title>
               <View style={styles.familyInfo}>
                 <View style={styles.nameAgeRow}>
-                  <Text style={styles.familyLabel}>नाम: {route?.params?.name || familyData?.childName || 'लोड हो रहा है...'}</Text>
+                  <Text style={styles.familyLabel}>नाम: {name || familyData?.childName || 'लोड हो रहा है...'}</Text>
                   {route?.params?.age && <Text style={styles.familyAge}> (उम्र: {route.params.age} वर्ष)</Text>}
                 </View>
                 <Text style={styles.familyLabel}>माता: {route?.params?.motherName || familyData?.motherName || 'लोड हो रहा है...'}</Text>
@@ -215,7 +205,7 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
             </View>
             <View style={styles.plantInfo}>
               <Title style={styles.plantTitle}>
-                {route?.params?.name ? `${route.params.name} का पौधा` : familyData?.childName ? `${familyData.childName} का पौधा` : plantData.plantName}
+                {name ? `${name} का पौधा` : familyData?.childName ? `${familyData.childName} का पौधा` : plantData.plantName}
               </Title>
               <Text style={styles.plantAge}>{plantData.plantAge}</Text>
             </View>
@@ -266,6 +256,27 @@ export default function FamilyDashboard({ navigation, route }: FamilyDashboardPr
               style={styles.latestPhoto}
               resizeMode="cover"
             />
+            {/* NEW: Display AI Prediction */}
+            {aiPredictionStatus && (
+              <View style={styles.aiPredictionBox}>
+                <Text style={[
+                  styles.aiPredictionText,
+                  aiIsMoringa === true ? styles.aiPredictionMoringa : styles.aiPredictionNotMoringa
+                ]}>
+                  {aiIsMoringa === true ? '✅ यह मोरिंगा पौधा है (AI द्वारा)' : 
+                   aiIsMoringa === false ? '❌ यह मोरिंगा पौधा नहीं लगता (AI द्वारा)' :
+                   '❗ AI पहचान में त्रुटि हुई'}
+                </Text>
+                {aiConfidence !== null && (
+                  <Text style={[
+                    styles.aiConfidenceText,
+                    aiIsMoringa === true ? styles.aiPredictionMoringa : styles.aiPredictionNotMoringa
+                  ]}>
+                    आत्मविश्वास: {aiConfidence}%
+                  </Text>
+                )}
+              </View>
+            )}
           </Surface>
         )}
 
@@ -544,18 +555,68 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   actionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center', // Center buttons if they don't fill width
     gap: 12,
   },
   actionButton: {
-    flex: 1,
-    minWidth: '45%',
+    flexGrow: 1, // Allow buttons to grow
+    minWidth: '45%', // Ensure they take up reasonable space
     borderRadius: 12,
-    marginBottom: 8,
+    paddingVertical: 8,
+  },
+  latestPhotoContainer: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    elevation: 6,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    alignItems: 'center', // Center content horizontally
+  },
+  latestPhoto: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  // NEW STYLES for AI Prediction
+  aiPredictionBox: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: '95%', // Make it slightly smaller than full width
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiPredictionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  aiConfidenceText: {
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  aiPredictionMoringa: {
+    color: '#2E7D32', // Green
+    borderColor: '#66BB6A', // Lighter green border
+    backgroundColor: '#E8F5E8', // Very light green background
+  },
+  aiPredictionNotMoringa: {
+    color: '#D32F2F', // Red
+    borderColor: '#EF9A9A', // Lighter red border
+    backgroundColor: '#FFEBEE', // Very light red background
   },
   scheduleContainer: {
     padding: 20,
@@ -574,41 +635,44 @@ const styles = StyleSheet.create({
   scheduleItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 10,
   },
   scheduleIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E8',
+    backgroundColor: '#CFD8DC',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   scheduleEmoji: {
-    fontSize: 18,
+    fontSize: 20,
   },
   scheduleContent: {
     flex: 1,
   },
   scheduleTitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1a1a1a',
-    marginBottom: 2,
   },
   scheduleTime: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#4CAF50',
     fontWeight: '500',
-    marginBottom: 2,
+    marginTop: 2,
   },
   scheduleStatus: {
     fontSize: 11,
     color: '#666666',
+    marginTop: 2,
   },
   scheduleButton: {
     borderRadius: 8,
-    minWidth: 80,
+    paddingHorizontal: 5,
   },
   timelineContainer: {
     padding: 20,
@@ -622,41 +686,46 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   timeline: {
-    gap: 16,
+    paddingVertical: 10,
+    paddingLeft: 20,
+    borderLeftWidth: 2,
+    borderLeftColor: '#E0E0E0',
   },
   timelineItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    marginBottom: 20,
   },
   timelineDot: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E8F5E8',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginLeft: -35, // Adjust to align with the line
+    marginRight: 15,
+    elevation: 2,
   },
   timelineEmoji: {
-    fontSize: 18,
+    fontSize: 16,
   },
   timelineContent: {
     flex: 1,
   },
   timelineTitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1a1a1a',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   timelineDate: {
     fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
+    color: '#666666',
     marginBottom: 4,
   },
   timelineDesc: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#666666',
   },
   nutritionContainer: {
@@ -664,38 +733,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 16,
     elevation: 6,
+    marginBottom: 20, // Keep some margin for FAB
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
   },
   nutritionCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   nutritionEmoji: {
-    fontSize: 32,
-    marginBottom: 12,
+    fontSize: 30,
+    marginBottom: 10,
   },
   nutritionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    textAlign: 'center',
+    fontWeight: '700',
+    color: '#2E7D32',
     marginBottom: 8,
+    textAlign: 'center',
   },
   nutritionDesc: {
     fontSize: 13,
     color: '#666666',
+    lineHeight: 20,
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  nutritionButton: {
-    borderRadius: 8,
   },
   fab: {
     position: 'absolute',
@@ -703,22 +774,5 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#4CAF50',
-  },
-  latestPhotoContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    elevation: 6,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  latestPhoto: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    marginTop: 10,
   },
 });
