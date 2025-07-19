@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView, KeyboardAvoidingView, Platform, Dimension
 import { Provider as PaperProvider, Card, Title, Paragraph, Button, Surface, TextInput, Text, HelperText } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { apiService, LoginResponse } from './src/utils/api';
+import { apiService, LoginResponse } from './src/utils/api'; // Assuming LoginResponse is correctly typed
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -32,7 +32,7 @@ function LoginScreen({ navigation }: { navigation: any }) {
     }
 
     setLoading(true);
-    
+
     try {
       // Test server connection (optional)
       console.log('Testing connection to server...');
@@ -43,85 +43,102 @@ function LoginScreen({ navigation }: { navigation: any }) {
         Alert.alert('कनेक्शन त्रुटि', `सर्वर से कनेक्ट नहीं हो पा रहा है: ${connectionTest.message}`);
         return;
       }
-      
+
       console.log('Connection successful, attempting login...');
       const response = await apiService.login(email.trim(), password);
       console.log('Login response:', response);
 
       if (response.success && response.user) {
         const user = response.user;
+        // IMPORTANT: Log the full user object here to see its exact structure
+        console.log("Full user object received from backend (for debugging role/fields):", JSON.stringify(user, null, 2));
 
         // Store the token if available
         if (response.token) {
           apiService.setToken(response.token);
         }
-        
-        // Navigate based on user role
-        const userRole = response.user?.role || response.role;
-        console.log('User role:', userRole);
-        
+
+        // Determine user role (prioritize role from response directly, then try user.role)
+        // Backend now explicitly sends 'role' at the top level and inside 'user'
+        const userRole = response.role || user.role;
+        console.log('Determined user role for navigation:', userRole);
+
         switch (userRole) {
           case 'admin':
-          Alert.alert('Admin dashboard is disabled.');
-          break;
-          case 'anganwadi':
-          navigation.navigate('AnganwadiDashboard');
-          break;
+            Alert.alert('Admin dashboard is disabled.');
+            break;
+          case 'aanganwadi':
+            navigation.navigate('AnganwadiDashboard');
+            break;
           case 'family':
-            const userName = user.name || '';
-            const userUsername = user.username || '';
-            const guardianName = (user as any).guardian_name || '';
-            const fatherName = (user as any).father_name || '';
-            const motherName = (user as any).mother_name || '';
-            const age = (user as any).age || '';
-            const aanganwadi_code = (user as any).aanganwadi_code || (user as any).center_code || (user as any).anganwadi_center_code || '';
-            console.log("Aanganwadi code:", aanganwadi_code);
-            console.log("Full user object:", user);
-            console.log("Student details received:", user);
+            // Extract all necessary details for FamilyDashboard, using backend field names
+            const familyUserId = user.username; // Backend sends mobile number as 'username' for students
+            const familyName = user.name;
+            const familyAge = user.age;
+            const familyGuardianName = user.guardian_name;
+            const familyFatherName = user.father_name;
+            const familyMotherName = user.mother_name;
+            const familyAanganwadiCode = user.aanganwadi_code;
+            const familyMobileNumber = user.username; // Explicitly pass username as mobileNumber
+
+            console.log("Navigating to FamilyDashboard with:", {
+              userId: familyUserId,
+              name: familyName,
+              age: familyAge,
+              guardianName: familyGuardianName,
+              fatherName: familyFatherName,
+              motherName: familyMotherName,
+              aanganwadi_code: familyAanganwadiCode,
+              mobileNumber: familyMobileNumber, // This is the crucial fix
+            });
 
             navigation.navigate('FamilyDashboard', {
-              userId: userUsername,
-              name: userName,
-              age,
-              guardianName,
-              fatherName,
-              motherName,
-              aanganwadi_code,
+              userId: familyUserId,
+              name: familyName,
+              age: familyAge,
+              guardianName: familyGuardianName,
+              fatherName: familyFatherName,
+              motherName: familyMotherName,
+              aanganwadi_code: familyAanganwadiCode,
+              mobileNumber: familyMobileNumber,
             });
-          break;
-        default:
-            // If no specific role, try to determine from username or other fields
-            if (response.user?.username?.toUpperCase().includes('ADMIN') || 
-                response.user?.username?.toUpperCase().includes('CGCO')) {
+            break;
+          default:
+            // Fallback for roles not explicitly handled by a direct 'role' field or a misconfiguration
+            // This block is less critical if your `case 'family'` is robust, but good for safety.
+            if (user.username?.toUpperCase().includes('ADMIN') ||
+              user.username?.toUpperCase().includes('CGCO')) {
               Alert.alert('Admin dashboard is disabled.');
-            } else if (response.user?.username?.toUpperCase().includes('ANGANWADI') || 
-                       response.user?.username?.toUpperCase().includes('CGAB')) {
+            } else if (user.username?.toUpperCase().includes('ANGANWADI') ||
+              user.username?.toUpperCase().includes('CGAB')) {
               navigation.navigate('AnganwadiDashboard');
-            } else if (response.user?.username?.toUpperCase().includes('FAMILY') || 
-                       response.user?.username?.toUpperCase().includes('CGPV')) {
-              // Family user - extract and pass family details
-              const userName = user.name || '';
-              const userUsername = user.username || '';
-              const guardianName = (user as any).guardian_name || '';
-              const fatherName = (user as any).father_name || '';
-              const motherName = (user as any).mother_name || '';
-              const age = (user as any).age || '';
-              const aanganwadi_code = (user as any).aanganwadi_code || (user as any).center_code || (user as any).anganwadi_center_code || '';
-              
+            } else if (user.username?.toUpperCase().includes('FAMILY') ||
+              user.username?.toUpperCase().includes('CGPV')) {
+              // This fallback should now be less used if `case 'family'` hits correctly.
+              const defaultFamilyUserId = user.username || '';
+              const defaultFamilyName = user.name || '';
+              const defaultFamilyAge = user.age || '';
+              const defaultFamilyGuardianName = user.guardian_name || '';
+              const defaultFamilyFatherName = user.father_name || '';
+              const defaultFamilyMotherName = user.mother_name || '';
+              const defaultFamilyAanganwadiCode = user.aanganwadi_code || '';
+              const defaultFamilyMobileNumber = user.username || ''; // Use username as mobile number
+
               navigation.navigate('FamilyDashboard', {
-                userId: userUsername,
-                name: userName,
-                age,
-                guardianName,
-                fatherName,
-                motherName,
-                aanganwadi_code,
+                userId: defaultFamilyUserId,
+                name: defaultFamilyName,
+                age: defaultFamilyAge,
+                guardianName: defaultFamilyGuardianName,
+                fatherName: defaultFamilyFatherName,
+                motherName: defaultFamilyMotherName,
+                aanganwadi_code: defaultFamilyAanganwadiCode,
+                mobileNumber: defaultFamilyMobileNumber,
               });
             } else {
               Alert.alert('त्रुटि', 'अज्ञात उपयोगकर्ता भूमिका।');
             }
-          break;
-      }
+            break;
+        }
       } else {
         Alert.alert('लॉगिन विफल', response.message || 'लॉगिन में त्रुटि हुई।');
       }
@@ -132,7 +149,6 @@ function LoginScreen({ navigation }: { navigation: any }) {
       setLoading(false);
     }
   };
-
 
 
   const handleSignUp = () => {
@@ -152,86 +168,86 @@ function LoginScreen({ navigation }: { navigation: any }) {
   }, []);
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-        <StatusBar style="light" />
-        
-        {/* Background Gradient */}
-        <LinearGradient
-          colors={['#2E7D32', '#4CAF50', '#66BB6A']}
-          style={styles.backgroundGradient}
-        />
-        
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <Surface style={styles.header}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoText}>HGM</Text>
-              </View>
+      <StatusBar style="light" />
+
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#2E7D32', '#4CAF50', '#66BB6A']}
+        style={styles.backgroundGradient}
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <Surface style={styles.header}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>HGM</Text>
             </View>
-            <View style={styles.titleContainer}>
-              <Title style={styles.headerTitle}>हर घर मुंगा</Title>
-            </View>
-          </Surface>
-
-          {/* Login Card */}
-          <Card style={styles.loginCard}>
-            <Card.Content>
-              <Title style={styles.loginTitle}>लॉगिन करें</Title>
-              <Paragraph style={styles.loginSubtitle}>
-                हर घर मुंगा अभियान में आपका स्वागत है
-              </Paragraph>
-
-              <TextInput
-                label="उपयोगकर्ता नाम"
-                value={email}
-                onChangeText={setEmail}
-                mode="outlined"
-                style={styles.input}
-                left={<TextInput.Icon icon="account" />}
-                theme={{ colors: { primary: '#2E7D32' } }}
-              />
-
-              <TextInput
-                label="पासवर्ड"
-                value={password}
-                onChangeText={setPassword}
-                mode="outlined"
-                secureTextEntry={!showPassword}
-                style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
-                right={
-                  <TextInput.Icon 
-                    icon={showPassword ? "eye-off" : "eye"} 
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-                theme={{ colors: { primary: '#2E7D32' } }}
-              />
-
-              <Button
-                mode="contained"
-                onPress={handleLogin}
-                loading={loading}
-                style={styles.loginButton}
-                buttonColor="#2E7D32"
-                contentStyle={styles.loginButtonContent}
-              >
-                {loading ? 'लॉगिन हो रहा है...' : 'लॉगिन करें'}
-              </Button>
-            </Card.Content>
-          </Card>
-
-          {/* Powered by SSIPMT */}
-          <View style={styles.poweredByContainer}>
-            <Text style={styles.poweredByText}>Powered by</Text>
-            <Text style={styles.ssimptText}>SSIPMT RAIPUR</Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.titleContainer}>
+            <Title style={styles.headerTitle}>हर घर मुंगा</Title>
+          </View>
+        </Surface>
+
+        {/* Login Card */}
+        <Card style={styles.loginCard}>
+          <Card.Content>
+            <Title style={styles.loginTitle}>लॉगिन करें</Title>
+            <Paragraph style={styles.loginSubtitle}>
+              हर घर मुंगा अभियान में आपका स्वागत है
+            </Paragraph>
+
+            <TextInput
+              label="उपयोगकर्ता नाम"
+              value={email}
+              onChangeText={setEmail}
+              mode="outlined"
+              style={styles.input}
+              left={<TextInput.Icon icon="account" />}
+              theme={{ colors: { primary: '#2E7D32' } }}
+            />
+
+            <TextInput
+              label="पासवर्ड"
+              value={password}
+              onChangeText={setPassword}
+              mode="outlined"
+              secureTextEntry={!showPassword}
+              style={styles.input}
+              left={<TextInput.Icon icon="lock" />}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? "eye-off" : "eye"}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+              theme={{ colors: { primary: '#2E7D32' } }}
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleLogin}
+              loading={loading}
+              style={styles.loginButton}
+              buttonColor="#2E7D32"
+              contentStyle={styles.loginButtonContent}
+            >
+              {loading ? 'लॉगिन हो रहा है...' : 'लॉगिन करें'}
+            </Button>
+          </Card.Content>
+        </Card>
+
+        {/* Powered by SSIPMT */}
+        <View style={styles.poweredByContainer}>
+          <Text style={styles.poweredByText}>Powered by</Text>
+          <Text style={styles.ssimptText}>SSIPMT RAIPUR</Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -239,7 +255,7 @@ export default function App() {
   return (
     <PaperProvider>
       <NavigationContainer>
-        <Stack.Navigator 
+        <Stack.Navigator
           initialRouteName="Login"
           screenOptions={{
             headerShown: false,

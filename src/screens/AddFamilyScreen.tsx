@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, ScrollView, Image, Platform, StyleSheet, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
+import { View, Text, TextInput, Button, Alert, ScrollView, Image, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { API_BASE_URL } from '../utils/api';
@@ -63,7 +63,6 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // MODIFIED pickImage & pickFromGallery to store URI, not base64
   const pickImage = async (photoType: 'plantPhoto' | 'pledgePhoto') => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
@@ -72,12 +71,11 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // Remove crop functionality
+      allowsEditing: false,
       quality: 1,
-      // base64: true, // NO LONGER NEED BASE64 HERE
     });
     if (!result.canceled) {
-      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri })); // Store URI
+      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri }));
     }
   };
 
@@ -89,18 +87,35 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // Remove crop functionality
+      allowsEditing: false,
       quality: 1,
-      // base64: true, // NO LONGER NEED BASE64 HERE
     });
     if (!result.canceled) {
-      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri })); // Store URI
+      setPhotos(prev => ({ ...prev, [photoType]: result.assets[0].uri }));
     }
   };
 
+  // MODIFIED: showImageOptions to present a choice
   const showImageOptions = (photoType: 'plantPhoto' | 'pledgePhoto', title: string) => {
-    // Directly open camera instead of showing options
-    pickImage(photoType);
+    Alert.alert(
+      title,
+      'फोटो कैसे अपलोड करना चाहेंगे?',
+      [
+        {
+          text: 'कैमरा से लें',
+          onPress: () => pickImage(photoType),
+        },
+        {
+          text: 'गैलरी से चुनें',
+          onPress: () => pickFromGallery(photoType),
+        },
+        {
+          text: 'रद्द करें',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const formatDateToYYYYMMDD = (dateString: string) => {
@@ -112,29 +127,26 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
     setShowConfirmDialog(false);
     setLoading(true);
     try {
-      const data = new FormData(); // Create FormData object
+      const data = new FormData();
 
       // Append text fields
       data.append('username', formData.mobileNumber?.toUpperCase() || '');
       data.append('name', formData.childName);
-      data.append('password', 'hgm@2025'); // Still using hardcoded password - remember my warnings!
+      data.append('password', 'hgm@2025');
       data.append('guardian_name', formData.workerName);
       data.append('father_name', formData.fatherName);
       data.append('mother_name', formData.motherName);
-      data.append('age', formData.age); // Send as string, backend will parse int
+      data.append('age', formData.age);
       data.append('dob', formatDateToYYYYMMDD(formData.dateOfBirth));
-      data.append('aanganwadi_code', String(parseInt(formData.anganwadiCode?.match(/\d+/)?.[0] || '0'))); // Parse and send as string
-      data.append('weight', formData.weight); // Send as string, backend will parse float
-      data.append('height', formData.height); // Send as string, backend will parse float
+      data.append('aanganwadi_code', String(parseInt(formData.anganwadiCode?.match(/\d+/)?.[0] || '0')));
+      data.append('weight', formData.weight);
+      data.append('height', formData.height);
       data.append('health_status', 'healthy');
 
-      // Address parts - append separately or as concatenated string
-      // If you want backend to combine, append individually.
-      // If backend expects combined 'address' field, combine here.
-      // Backend expects 'address' as one field, so combine on frontend.
+      // Address parts
       const address = `${formData.village}, ${formData.ward}, ${formData.panchayat}, ${formData.district}, ${formData.block}`;
       data.append('address', address);
-      data.append('village', formData.village); // Include these too if backend needs them separately later
+      data.append('village', formData.village);
       data.append('ward', formData.ward);
       data.append('panchayat', formData.panchayat);
       data.append('district', formData.district);
@@ -144,9 +156,9 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
       if (photos.plantPhoto) {
         data.append('plant_photo', {
           uri: photos.plantPhoto,
-          name: 'plant_photo.jpg', // You might want a more dynamic name or rely on backend to generate
-          type: 'image/jpeg', // Adjust type if you allow other formats
-        } as any); // Use 'as any' for now, or define a proper type for Blob/File
+          name: 'plant_photo.jpg',
+          type: 'image/jpeg',
+        } as any);
       }
 
       if (photos.pledgePhoto) {
@@ -157,12 +169,11 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
         } as any);
       }
 
-      console.log('Sending FormData:', data); // Console log FormData is tricky, will show as [object FormData]
+      console.log('Sending FormData:', data);
 
       const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
-        // No 'Content-Type' header needed here, fetch sets it automatically for FormData
-        body: data, // Send the FormData object directly
+        body: data,
       });
 
       console.log('Response status:', response.status);
@@ -193,46 +204,46 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
       {/* बच्चे की जानकारी */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>बच्चे की जानकारी</Text>
-        
+
         <Text style={styles.label}>बच्चे का नाम</Text>
-        <TextInput 
-          value={formData.childName} 
-          onChangeText={(v) => handleInputChange('childName', v)} 
+        <TextInput
+          value={formData.childName}
+          onChangeText={(v) => handleInputChange('childName', v)}
           style={styles.input}
           placeholder="बच्चे का नाम दर्ज करें"
         />
 
         <Text style={styles.label}>जन्म तिथि (dd/mm/yyyy)</Text>
-        <TextInput 
-          value={formData.dateOfBirth} 
-          onChangeText={(v) => handleInputChange('dateOfBirth', v)} 
+        <TextInput
+          value={formData.dateOfBirth}
+          onChangeText={(v) => handleInputChange('dateOfBirth', v)}
           style={styles.input}
           placeholder="जन्म तिथि दर्ज करें"
         />
 
         <Text style={styles.label}>आयु</Text>
-        <TextInput 
-          value={formData.age} 
-          onChangeText={(v) => handleInputChange('age', v)} 
-          keyboardType="numeric" 
+        <TextInput
+          value={formData.age}
+          onChangeText={(v) => handleInputChange('age', v)}
+          keyboardType="numeric"
           style={styles.input}
           placeholder="आयु दर्ज करें"
         />
 
         <Text style={styles.label}>वजन (kg)</Text>
-        <TextInput 
-          value={formData.weight} 
-          onChangeText={(v) => handleInputChange('weight', v)} 
-          keyboardType="numeric" 
+        <TextInput
+          value={formData.weight}
+          onChangeText={(v) => handleInputChange('weight', v)}
+          keyboardType="numeric"
           style={styles.input}
           placeholder="वजन दर्ज करें"
         />
 
         <Text style={styles.label}>ऊंचाई (cm)</Text>
-        <TextInput 
-          value={formData.height} 
-          onChangeText={(v) => handleInputChange('height', v)} 
-          keyboardType="numeric" 
+        <TextInput
+          value={formData.height}
+          onChangeText={(v) => handleInputChange('height', v)}
+          keyboardType="numeric"
           style={styles.input}
           placeholder="ऊंचाई दर्ज करें"
         />
@@ -241,36 +252,36 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
       {/* माता-पिता की जानकारी */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>माता-पिता की जानकारी</Text>
-        
+
         <Text style={styles.label}>माता का नाम</Text>
-        <TextInput 
-          value={formData.motherName} 
-          onChangeText={(v) => handleInputChange('motherName', v)} 
+        <TextInput
+          value={formData.motherName}
+          onChangeText={(v) => handleInputChange('motherName', v)}
           style={styles.input}
           placeholder="माता का नाम दर्ज करें"
         />
 
         <Text style={styles.label}>पिता का नाम</Text>
-        <TextInput 
-          value={formData.fatherName} 
-          onChangeText={(v) => handleInputChange('fatherName', v)} 
+        <TextInput
+          value={formData.fatherName}
+          onChangeText={(v) => handleInputChange('fatherName', v)}
           style={styles.input}
           placeholder="पिता का नाम दर्ज करें"
         />
 
         <Text style={styles.label}>मोबाइल नंबर (ID)</Text>
-        <TextInput 
-          value={formData.mobileNumber} 
-          onChangeText={(v) => handleInputChange('mobileNumber', v)} 
+        <TextInput
+          value={formData.mobileNumber}
+          onChangeText={(v) => handleInputChange('mobileNumber', v)}
           style={styles.input}
           placeholder="मोबाइल नंबर दर्ज करें"
           keyboardType="phone-pad"
         />
 
         <Text style={styles.label}>आंगनवाड़ी कोड</Text>
-        <TextInput 
-          value={formData.anganwadiCode} 
-          onChangeText={(v) => handleInputChange('anganwadiCode', v)} 
+        <TextInput
+          value={formData.anganwadiCode}
+          onChangeText={(v) => handleInputChange('anganwadiCode', v)}
           style={styles.input}
           placeholder="आंगनवाड़ी कोड दर्ज करें"
         />
@@ -279,43 +290,43 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
       {/* पता की जानकारी */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>पता की जानकारी</Text>
-        
+
         <Text style={styles.label}>गाँव</Text>
-        <TextInput 
-          value={formData.village} 
-          onChangeText={(v) => handleInputChange('village', v)} 
+        <TextInput
+          value={formData.village}
+          onChangeText={(v) => handleInputChange('village', v)}
           style={styles.input}
           placeholder="गाँव का नाम दर्ज करें"
         />
 
         <Text style={styles.label}>वार्ड</Text>
-        <TextInput 
-          value={formData.ward} 
-          onChangeText={(v) => handleInputChange('ward', v)} 
+        <TextInput
+          value={formData.ward}
+          onChangeText={(v) => handleInputChange('ward', v)}
           style={styles.input}
           placeholder="वार्ड नंबर दर्ज करें"
         />
 
         <Text style={styles.label}>पंचायत</Text>
-        <TextInput 
-          value={formData.panchayat} 
-          onChangeText={(v) => handleInputChange('panchayat', v)} 
+        <TextInput
+          value={formData.panchayat}
+          onChangeText={(v) => handleInputChange('panchayat', v)}
           style={styles.input}
           placeholder="पंचायत का नाम दर्ज करें"
         />
 
         <Text style={styles.label}>जिला</Text>
-        <TextInput 
-          value={formData.district} 
-          onChangeText={(v) => handleInputChange('district', v)} 
+        <TextInput
+          value={formData.district}
+          onChangeText={(v) => handleInputChange('district', v)}
           style={styles.input}
           placeholder="जिला का नाम दर्ज करें"
         />
 
         <Text style={styles.label}>विकासखंड (Block)</Text>
-        <TextInput 
-          value={formData.block} 
-          onChangeText={(v) => handleInputChange('block', v)} 
+        <TextInput
+          value={formData.block}
+          onChangeText={(v) => handleInputChange('block', v)}
           style={styles.input}
           placeholder="विकासखंड का नाम दर्ज करें"
         />
@@ -324,14 +335,14 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
       {/* Photo Upload Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>फोटो अपलोड</Text>
-        
+
         <Text style={styles.label}>पौधे की फोटो</Text>
         <View style={styles.uploadBlock}>
           {photos.plantPhoto ? (
             <View style={styles.photoContainer}>
               <Image source={{ uri: photos.plantPhoto }} style={styles.photoPreview} />
-              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}>
-                <Text style={styles.cameraButtonText}>📷 नई फोटो लें</Text>
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('plantPhoto', 'पौधे की फोटो अपलोड करें')}>
+                <Text style={styles.cameraButtonText}>🔄 फोटो बदलें</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -339,8 +350,8 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
               <View style={styles.photoPlaceholder}>
                 <Text style={styles.photoPlaceholderText}>कोई फोटो नहीं</Text>
               </View>
-              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('plantPhoto', 'बच्चे को मुंगे का पेड़ देते हुए फोटो लें')}>
-                <Text style={styles.cameraButtonText}>📷 पौधे की फोटो लें</Text>
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('plantPhoto', 'पौधे की फोटो अपलोड करें')}>
+                <Text style={styles.cameraButtonText}>📸 पौधे की फोटो अपलोड करें</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -351,8 +362,8 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
           {photos.pledgePhoto ? (
             <View style={styles.photoContainer}>
               <Image source={{ uri: photos.pledgePhoto }} style={styles.photoPreview} />
-              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}>
-                <Text style={styles.cameraButtonText}>📷 नई फोटो लें</Text>
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('pledgePhoto', 'शपथ पत्र की फोटो अपलोड करें')}>
+                <Text style={styles.cameraButtonText}>🔄 फोटो बदलें</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -360,8 +371,8 @@ export default function AddFamilyScreen({ navigation }: AddFamilyScreenProps) {
               <View style={styles.photoPlaceholder}>
                 <Text style={styles.photoPlaceholderText}>कोई फोटो नहीं</Text>
               </View>
-              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('pledgePhoto', 'हस्ताक्षरित शपथ पत्र की फोटो लें')}>
-                <Text style={styles.cameraButtonText}>📷 शपथ पत्र की फोटो लें</Text>
+              <TouchableOpacity style={styles.cameraButton} onPress={() => showImageOptions('pledgePhoto', 'शपथ पत्र की फोटो अपलोड करें')}>
+                <Text style={styles.cameraButtonText}>📸 शपथ पत्र की फोटो अपलोड करें</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -474,6 +485,7 @@ const styles = StyleSheet.create({
     color: '#BDBDBD',
     fontSize: 16,
   },
+  // Added a specific style for the button text within the options
   cameraButton: {
     backgroundColor: '#4CAF50',
     borderRadius: 25,
@@ -484,7 +496,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    marginBottom: 5,
+    marginBottom: 5, // Keep a small margin for separation if multiple buttons
   },
   cameraButtonText: {
     color: '#fff',
